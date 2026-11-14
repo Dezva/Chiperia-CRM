@@ -1,0 +1,2 @@
+Prueba temporal de permisos de escritura desde ChatGPT.
+Se eliminará tras verificar el commit.
