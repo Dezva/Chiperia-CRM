@@ -1,0 +1,29 @@
+{
+  "sources": [
+    {
+      "repository": "https://github.com/Dezva/Velturio-CRM",
+      "path": "app.js",
+      "blob_sha": "09818979f3d1387804200841eeb985d4b7131370"
+    },
+    {
+      "repository": "https://github.com/Dezva/Velturio-CRM",
+      "path": "database.sql",
+      "blob_sha": "8a133b3c5826ccd5f5c5875bc14c44b41f6169f5"
+    },
+    {
+      "repository": "https://github.com/Dezva/Velturio-CRM",
+      "path": "dar-acceso.sql",
+      "blob_sha": "b42da5f6ec9ed450aded75ec9d875cb1ee5cf1b6"
+    },
+    {
+      "repository": "https://github.com/Dezva/Velturio",
+      "path": "netlify/functions/whatsapp.mjs",
+      "blob_sha": "8df468000e4cf04c2dddcdd8b3e8aac26cf9a18c"
+    }
+  ],
+  "reuse": [
+    "Helpers de interfaz y autorización crm_members de Velturio-CRM.",
+    "Esquema base de clientes y políticas RLS de Velturio-CRM.",
+    "Validación HMAC y procesamiento de respuestas de Veli; adaptados a cola durable y bandeja persistente."
+  ]
+}

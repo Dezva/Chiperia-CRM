@@ -1,0 +1,9 @@
+{
+  "project": "El Viejo CRM - Villeta V1",
+  "source_repository": "https://github.com/Dezva/Guarnipitan-CRM",
+  "source_commit": "ccd7e9e35ddc70bd51dfaa8b67f6556555480f3c",
+  "destination_repository": "https://github.com/Dezva/Chiperia-CRM",
+  "commercial_source": "docs/requerimientos.md",
+  "historical_provenance": "UPSTREAM_PROVENANCE.json",
+  "note": "Source read only. Reused transport, auth, RLS, location validation and compatibility tests. No original business data or credentials imported."
+}
