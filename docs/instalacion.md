@@ -35,6 +35,7 @@ Crear un proyecto **nuevo** exclusivo para El Viejo Villeta. Ejecutar con SQL Ed
 4. `database/006_ubicaciones_delivery.sql`
 5. `database/007_el_viejo.sql`
 6. `database/008_catalogo_el_viejo.sql`
+7. `database/009_v11_fiabilidad.sql`
 
 003 está reservado; no carga productos del bar original. 004 es una plantilla para autorizar usuarios, no una migración automática. Desactivar registro público, crear/invitar la primera cuenta en Supabase Auth y autorizarla con 004 cambiando el correo, nombre y rol a `admin`. Posteriores cuentas Auth se autorizan desde Usuarios del CRM. Configurar Site URL y Redirect URLs; completar contraseña desde los mecanismos de Auth. No hay pantalla propia para invitaciones/restablecimiento.
 
@@ -69,3 +70,7 @@ Antes de activar conexiones reales, confirmar autorización del negocio y revisa
 La demo necesita GitHub para checkout y el registro npm para instalar. Los presets actuales los permiten. Producción conectada necesitará el hostname exacto del nuevo proyecto Supabase, `graph.facebook.com` y el hostname del proveedor de IA (por ejemplo `api.openai.com`). Añadir esos dominios en ajustes si se autoriza ese flujo; no se amplió la red ni se añadieron secretos para esta demo.
 
 Los administradores pueden conceder a un empleado el permiso explícito `catalog_editor` desde Usuarios. Permite editar productos/precios en Catálogo sin autorizar configuración, menús ni gestión de usuarios. Las órdenes individuales siguen sin admitir cambios arbitrarios de precio unitario.
+
+## Actualizar desde V1
+
+Aplicar únicamente 009 antes del backend/frontend V1.1, siguiendo [la guía incremental](revisiones/v1.1-actualizacion.md). El bucket Storage es opcional y permanece apagado hasta autorización. Ver [visión real](vision-real.md) para variables y prueba manual aislada; las suites automáticas nunca activan esa prueba.

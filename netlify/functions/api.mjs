@@ -1,4 +1,5 @@
-import {db,rpc,member,json,kick} from '../lib/platform.mjs';
+import {canEditMenu} from '../../shared/permissions.js';
+import {env,db,rpc,member,json,kick} from '../lib/platform.mjs';
 import {validateImage} from './menu-recognize.mjs';
 import {whatsappDiagnostics} from '../lib/diagnostics.mjs';
 const allowed=new Set(['take','release','read','send','create_order','order_status','catalog','settings','client','delete_preview','delete_record','assign_location','menu','member','payment_status','order_details']);
@@ -44,9 +45,9 @@ export default async request=>{
     db('/rest/v1/guarni_orders?order=created_at.desc&limit=500&select=*,delivery_location:guarni_locations!delivery_location_id(*)'),
     db('/rest/v1/guarni_catalog?order=category,name,variant'),
     db('/rest/v1/guarni_settings?id=eq.true'),
-    db('/rest/v1/crm_members?select=user_id,display_name,role,catalog_editor'),db('/rest/v1/viejo_menus?order=created_at.desc&limit=90'),db('/rest/v1/viejo_history?order=created_at.desc&limit=2000')
+    db('/rest/v1/crm_members?select=user_id,display_name,role,catalog_editor,menu_editor'),db('/rest/v1/viejo_menus?select=id,day,status,items,created_by,created_at,photo_id,has_legacy_image&order=created_at.desc&limit=90'),db('/rest/v1/viejo_history?order=created_at.desc&limit=2000')
    ]);
-   return json({member:m,clients,conversations,orders,catalog,settings:{...settings[0]?.config},members,menus,history});
+   return json({photoStorageEnabled:env('MENU_PHOTO_STORAGE_ENABLED')==='true',member:m,clients,conversations,orders,catalog,settings:{...settings[0]?.config},members,menus,history});
   }
   if(request.method!=='POST')return json({error:'method_not_allowed'},405);
   const raw=await request.text();if(raw.length>4500000)return json({error:'Solicitud demasiado grande.'},413);
@@ -65,11 +66,12 @@ export default async request=>{
    try{return json(await rpc('guarni_delete',{p_actor:m.user_id,p_kind:data.kind,p_id:data.id,p_confirm:confirm}));}
    catch(error){if(error.code==='PGRST202')return json({error:'Falta habilitar la eliminación: ejecutá database/005_eliminacion_admin.sql en Supabase.'},409);throw error;}
   }
+  if(body.action==='menu'&&!canEditMenu(m))return json({error:'Necesitás permiso de edición de menú.'},403);
   if(body.action==='menu'&&body.data?.image)validateImage(body.data.image);
   const result=await rpc('viejo_staff',{p_actor:m.user_id,p_action:body.action,p_data:body.data||{}});
   await kick(request);return json(result);
  }catch(error){
-  const names={schedule_review_required:'Verificá horarios y coordiná cualquier excepción antes de confirmar.',group_review_required:'Revisá los pedidos relacionados y el envío conjunto.',explicit_delivery_fee_required:'Ingresá explícitamente el costo del delivery, incluso si es cero.',agreed_buffet_amount_required:'Registrá el importe del buffet acordado con el cliente.',price_or_availability_changed:'Cambió el precio o la disponibilidad. Revisá el catálogo y la solicitud.',daily_menu_required:'Falta un menú del buffet publicado para hoy.',human_review_required:'Revisá el menú antes de publicarlo.',review_fulfillment:'Revisá y guardá la modalidad antes de confirmar.',invalid_payment:'Seleccioná un método de pago configurado.',price_required:'El producto disponible necesita un precio confirmado.',last_admin:'Debe quedar al menos un administrador.',owned_by_another_member:'Otro integrante está atendiendo este chat.',not_owner:'Solo quien tomó el chat o un administrador puede reactivar el bot.',processing_wait:'Hay un mensaje en proceso. Esperá unos segundos y volvé a intentar.',outside_customer_window:'Pasaron 24 horas desde el último mensaje del cliente. Esperá que escriba nuevamente.',take_conversation_first:'Tomá la conversación antes de responder.',invalid_transition:'El pedido cambió de estado. Actualizá la vista.',admin_required:'Esta acción requiere un administrador.',address_required:'Ingresá la dirección de entrega.',confirm_fulfillment_and_fee:'Confirmá la modalidad y el costo de envío.'};
+  const names={menu_permission_required:'Necesitás permiso de edición de menú.',schedule_review_required:'Verificá horarios y coordiná cualquier excepción antes de confirmar.',group_review_required:'Revisá los pedidos relacionados y el envío conjunto.',explicit_delivery_fee_required:'Ingresá explícitamente el costo del delivery, incluso si es cero.',agreed_buffet_amount_required:'Registrá el importe del buffet acordado con el cliente.',price_or_availability_changed:'Cambió el precio o la disponibilidad. Revisá el catálogo y la solicitud.',daily_menu_required:'Falta un menú del buffet publicado para hoy.',human_review_required:'Revisá el menú antes de publicarlo.',review_fulfillment:'Revisá y guardá la modalidad antes de confirmar.',invalid_payment:'Seleccioná un método de pago configurado.',price_required:'El producto disponible necesita un precio confirmado.',last_admin:'Debe quedar al menos un administrador.',owned_by_another_member:'Otro integrante está atendiendo este chat.',not_owner:'Solo quien tomó el chat o un administrador puede reactivar el bot.',processing_wait:'Hay un mensaje en proceso. Esperá unos segundos y volvé a intentar.',outside_customer_window:'Pasaron 24 horas desde el último mensaje del cliente. Esperá que escriba nuevamente.',take_conversation_first:'Tomá la conversación antes de responder.',invalid_transition:'El pedido cambió de estado. Actualizá la vista.',admin_required:'Esta acción requiere un administrador.',address_required:'Ingresá la dirección de entrega.',confirm_fulfillment_and_fee:'Confirmá la modalidad y el costo de envío.'};
   if(error.message==='not_found')return json({error:'El registro ya no existe. Actualizá la vista.'},404);
   const locationErrors={delivery_location_required:'Este delivery necesita una ubicación puntual válida. Asociá la ubicación recibida antes de aceptar.',invalid_location:'La ubicación no es válida para esta conversación.',location_order_closed:'La ubicación solo puede asociarse a un pedido pendiente o a un delivery en curso.',location_changed:'La ubicación del pedido cambió. Actualizá la vista y revisala otra vez.',location_approval_required:'Revisá y aprobá el cambio de ubicación del pedido aceptado.'};
   if(locationErrors[error.message])return json({error:locationErrors[error.message]},409);

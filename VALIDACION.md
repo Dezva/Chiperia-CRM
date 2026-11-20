@@ -1,3 +1,5 @@
+> Para el resultado vigente V1.1 ver [validación V1.1](docs/revisiones/v1.1-validacion.md). Este documento conserva la evidencia de V1.
+
 # Validación ejecutada
 
 Fecha: 20 de noviembre de 2026. Entorno Linux cloud; Node 24.22.1, pnpm 11.25.0, Chromium del sistema, PGlite 0.5.15. Origen auditado en `docs/auditoria.md`.

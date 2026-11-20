@@ -34,3 +34,7 @@ Crear **otro** proyecto Supabase y **otro** sitio Netlify con su número/credenc
 - Sin plantillas WhatsApp fuera de 24 horas, pasarelas, impresión de cocina, facturación ni inventario de ingredientes. Se conservan los límites de transporte del upstream para audio/archivos.
 
 No se hizo push, publicación ni conexión a datos reales. El commit local identifica el resultado revisable.
+
+## Consolidación V1.1
+
+El encargado con `menu_editor` administra menús sin permiso administrativo general. La descarga de originales es autenticada y bajo demanda. [Actualización y Storage privado](revisiones/v1.1-actualizacion.md) describe la conservación configurable y la migración pendiente de fotos Base64 históricas. [Visión real](vision-real.md) define la evaluación manual autorizada; el reconocimiento simulado no demuestra precisión.

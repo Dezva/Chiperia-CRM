@@ -47,6 +47,7 @@ export function confirmation(order,input,catalog,{mode,owner_id,actor,menus=[],n
  const amount=order.service==='buffet'?input.buffet_amount:q.subtotal,fee=input.fulfillment==='delivery'?input.shipping_fee:0;
  return {...q,subtotal:amount,shipping_fee:fee,total:amount+fee};
 }
+export function sameItems(a,b){const fields=['variant_id','name','variant','qty','unit_price','notes'];return JSON.stringify(a.map(x=>fields.map(k=>x[k])))===JSON.stringify(b.map(x=>fields.map(k=>x[k])));}
 export function summary(cart){return cart.items.map(x=>`${x.qty} × ${x.name}${x.variant==='Base'?'':' · '+x.variant}${cart.service==='chiperia'?': '+money(x.qty*x.unit_price):''}`).join('\n')+'\n'+(cart.service==='buffet'?'Buffet: importe pendiente; el encargado lo acordará con vos.':'Subtotal: '+money(cart.items.reduce((s,x)=>s+x.qty*x.unit_price,0)))+'\nModalidad: '+cart.fulfillment+'. Envío pendiente de revisión.';}
 export function demoCommand(text,cart,catalog){
  const t=normalize(text),choice=fulfillmentChoice(text);
@@ -58,8 +59,9 @@ export function demoCommand(text,cart,catalog){
 }
 export function reduceOrder({text,cart:old,catalog,menus=[],command={},profileName='',settings=defaults,now=new Date()}){
  let cart=structuredClone({...emptyCart(profileName),...old});let selected=serviceChoice(text);
+ for(const saved of Object.values(cart.saved_carts||{}))if(saved&&typeof saved==='object')saved.delivery_location_id=null;
  if(selected==='mixed')return {cart,kind:'reply',reply:'Prepararemos solicitudes separadas y relacionadas para buffet y chipería. Empezá eligiendo un servicio; el equipo revisará un único delivery si corresponde.'};
- if(selected&&selected!==cart.service){const saved=cart.saved_carts||{};if(cart.service)saved[cart.service]={...cart,saved_carts:{}};cart={...emptyCart(profileName,selected),...saved[selected],service:selected,saved_carts:saved};command={intent:'menu'};}
+ if(selected&&selected!==cart.service){const initialPoint=cart.service?null:cart.delivery_location_id;const saved=cart.saved_carts||{};if(cart.service)saved[cart.service]={...cart,delivery_location_id:null,saved_carts:{}};cart={...emptyCart(profileName,selected),...saved[selected],service:selected,saved_carts:saved,delivery_location_id:initialPoint};command={intent:'menu'};}
  if(!cart.service)return {cart,kind:'reply',reply:greeting};
  const list=activeCatalog(cart.service,catalog,menus,now);
  if(/\b(humano|persona|encargado|empleado)\b/.test(normalize(text))||command.intent==='human')return {cart,kind:'human',reply:'El equipo continuará la atención. El asistente queda pausado.'};
@@ -74,7 +76,7 @@ export function reduceOrder({text,cart:old,catalog,menus=[],command={},profileNa
  if(isConfirmation(text)){
   if(!cart.items.length)return {cart,kind:'reply',reply:'Elegí productos y cantidades antes de enviar la solicitud.'};
   let fresh;try{fresh=quote(cart.items,cart.service,list);}catch{return {cart:{...cart,quoted:false},kind:'reply',reply:'Cambió la disponibilidad del catálogo. Revisá los productos con el equipo.'};}
-  if(!cart.quoted||JSON.stringify(fresh.items)!==JSON.stringify(cart.items)){cart={...cart,...fresh,quoted:true};return {cart,kind:'reply',reply:'Revisá el resumen actualizado:\n'+summary(cart)+'\nEscribí CONFIRMAR PEDIDO.'};}
+  if(!cart.quoted||!sameItems(fresh.items,cart.items)){cart={...cart,...fresh,quoted:true};return {cart,kind:'reply',reply:'Revisá el resumen actualizado:\n'+summary(cart)+'\nEscribí CONFIRMAR PEDIDO.'};}
   if(!['retiro','delivery'].includes(cart.fulfillment))return {cart,kind:'reply',reply:'¿Será retiro o delivery?'};
   if(cart.fulfillment==='delivery'&&(!cart.delivery_location_id||cart.address.trim().length<3))return {cart,kind:'reply',reply:'Enviá tu ubicación puntual de WhatsApp y una referencia para el delivery.'};
   const warning=availability(cart.service,cart.fulfillment,settings,now);

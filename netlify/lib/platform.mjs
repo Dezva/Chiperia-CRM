@@ -8,10 +8,11 @@ export function verifySignature(raw,signature,secret=env('META_APP_SECRET')){
  const a=Buffer.from(signature),b=Buffer.from(expected);
  return a.length===b.length&&timingSafeEqual(a,b);
 }
-export async function db(path,{method='GET',body,token}={}){
+export async function db(path,{method='GET',body,token,prefer}={}){
  const url=env('SUPABASE_URL'),key=env('SUPABASE_SECRET_KEY');
  if(!url||!key)throw Error('backend_not_configured');
  const headers={apikey:key,'content-type':'application/json'};
+ if(prefer)headers.prefer=prefer;
  if(token)headers.authorization='Bearer '+token;
  const r=await fetch(url+path,{method,headers,...(body!==undefined?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(12000)});
  const data=await r.json().catch(()=>null);
@@ -23,7 +24,7 @@ export async function member(request){
  const token=request.headers.get('authorization')?.replace(/^Bearer /i,'');
  if(!token)throw Object.assign(Error('Iniciá sesión.'),{status:401});
  let u;try{u=await db('/auth/v1/user',{token});}catch{throw Object.assign(Error('Sesión inválida o vencida.'),{status:401});}
- const rows=await db('/rest/v1/crm_members?user_id=eq.'+encodeURIComponent(u.id)+'&select=user_id,display_name,role,catalog_editor');
+ const rows=await db('/rest/v1/crm_members?user_id=eq.'+encodeURIComponent(u.id)+'&select=user_id,display_name,role,catalog_editor,menu_editor');
  if(!rows?.length)throw Object.assign(Error('Tu cuenta no es integrante del CRM.'),{status:403});
  return rows[0];
 }

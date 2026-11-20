@@ -1,7 +1,7 @@
 import {providerConfig} from '../../shared/ai-provider.js';
 import {randomUUID} from 'node:crypto';
 import {env,db,rpc,extractText} from './platform.mjs';
-import {reduceOrder,emptyCart,isConfirmation,fulfillmentChoice,serviceChoice,activeCatalog,defaults} from '../../shared/viejo-engine.js';
+import {reduceOrder,emptyCart,isConfirmation,fulfillmentChoice,serviceChoice,activeCatalog,defaults,localDate} from '../../shared/viejo-engine.js';
 const schema={type:'object',additionalProperties:false,properties:{intent:{type:'string',enum:['update_cart','menu','info','summary','human','help']},items:{type:'array',items:{type:'object',additionalProperties:false,properties:{variant_id:{type:'string'},qty:{type:'integer'},notes:{type:'string'}},required:['variant_id','qty','notes']}},customer_name:{type:'string'},fulfillment:{type:'string',enum:['retiro','delivery','local','a_coordinar']},address:{type:'string'},payment:{type:'string'},category:{type:'string'},query:{type:'string'}},required:['intent','items','customer_name','fulfillment','address','payment','category','query']};
 async function interpret(text,cart,catalog,settings){
  const {key,model,endpoint}=providerConfig(env);if(!key||!model)throw Error('ai_not_configured');
@@ -49,13 +49,14 @@ export async function runWorker({budgetMs=45000}={}){
    else if(/^\[Contenido (location|live_location) recibido:/.test(job.message.body))result={kind:'reply',cart:c.cart,reply:'Para adjuntar la ubicación a tu pedido, enviame tu ubicación actual puntual desde WhatsApp 📍.'};
    else if(job.message.body.startsWith('[Contenido '))result={kind:'human',cart:c.cart,reply:'Recibí un archivo. El equipo continuará la atención por este chat.'};
    else {
-    const [catalog,settings,client,menus]=await Promise.all([db('/rest/v1/guarni_catalog?select=id,name,variant,category,price,available'),db('/rest/v1/guarni_settings?id=eq.true'),db('/rest/v1/crm_clients?id=eq.'+c.client_id+'&select=name'),db('/rest/v1/viejo_menus?status=eq.published')]);
+    const [catalog,settings,client,menus]=await Promise.all([db('/rest/v1/guarni_catalog?select=id,name,variant,category,price,available,service'),db('/rest/v1/guarni_settings?id=eq.true'),db('/rest/v1/crm_clients?id=eq.'+c.client_id+'&select=name'),db('/rest/v1/viejo_menus?status=eq.published&day=eq.'+localDate()+'&select=id,day,status,items')]);
     const text=job.message.body;const cart={...(c.cart?.items?c.cart:emptyCart(client[0]?.name)),delivery_location_id:c.draft_location_id||null};
     const config={...defaults,...settings[0]?.config};
     let command;
     if(config.bot_enabled!==true){result={kind:'ignore',cart,reply:''};}
     else {
     if(serviceChoice(text))command={intent:'menu'};
+    else if(/^(men[uú]|carta|cat[aá]logo)[.!?]?$/i.test(text.trim()))command={intent:'menu'};
     else if(fulfillmentChoice(text))command={intent:'summary',fulfillment:fulfillmentChoice(text)};
     else if(!isConfirmation(text)&&!['/cancelar','/reiniciar','cancelar pedido'].includes(text.toLowerCase())&&!/\b(humano|persona|encargado|empleado)\b/i.test(text)){
      try{command=await interpret(text,cart,activeCatalog(cart.service,catalog,menus),config);}catch{command={intent:'human'};}

@@ -38,6 +38,10 @@ test('Navegador: demo completa de chipería, buffet, fotografía, intervención 
   await page.locator('#service').selectOption('buffet');assert.equal(await page.locator('tbody tr').count(),1);
   for(const v of ['clients','users','settings','delivery'])await nav(v);
   await page.screenshot({path:join(tmpdir(),'el-viejo-desktop.png'),fullPage:true});await page.setViewportSize({width:390,height:844});await page.locator('#mobileNav').click();await nav('dashboard');await page.waitForFunction(()=>document.getElementById('sidebar').getBoundingClientRect().right<=0);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:join(tmpdir(),'el-viejo-mobile.png'),fullPage:true});
+  // Permiso específico en la interfaz: encargado sin administración general.
+  await page.evaluate(()=>{const d=JSON.parse(localStorage.getItem('el-viejo-demo-v1'));d.member={user_id:crypto.randomUUID(),display_name:'Encargado de prueba',role:'member',menu_editor:true,catalog_editor:false};localStorage.setItem('el-viejo-demo-v1',JSON.stringify(d));});
+  await page.setViewportSize({width:1440,height:950});await page.reload();await page.getByRole('heading',{name:'Buena atención, todos los días.'}).waitFor();await nav('menus');await page.getByRole('button',{name:'+ Cargar menú'}).waitFor();await page.getByRole('button',{name:'+ Cargar menú'}).click();await close();await nav('users');assert.equal(await page.getByRole('button',{name:'+ Autorizar cuenta'}).count(),0);await nav('catalog');assert.equal(await page.getByRole('button',{name:'+ Producto'}).count(),0);
+  await page.evaluate(()=>{const d=JSON.parse(localStorage.getItem('el-viejo-demo-v1'));d.member.menu_editor=false;localStorage.setItem('el-viejo-demo-v1',JSON.stringify(d));});await page.reload();await nav('menus');assert.equal(await page.getByRole('button',{name:'+ Cargar menú'}).count(),0);
   assert.deepEqual(errors,[]);
  }finally{if(browser)await browser.close();server.kill();}
 });
