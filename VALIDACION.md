@@ -1,4 +1,4 @@
-> Para el resultado vigente V1.1 ver [validación V1.1](docs/revisiones/v1.1-validacion.md). Este documento conserva la evidencia de V1.
+> Para el resultado vigente V1.2 ver [validación V1.2](docs/revisiones/v1.2-validacion.md). Este documento conserva la evidencia de V1.
 
 # Validación ejecutada
 

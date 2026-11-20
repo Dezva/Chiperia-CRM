@@ -5,7 +5,7 @@ import {checkOptIn} from '../scripts/vision-smoke.mjs';
 import {mockEnvironment} from './v11-helpers.mjs';
 const png='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j2XcAAAAASUVORK5CYII=';
 const config={endpoint:'https://fixture-vision.test/v1/responses',key:'fixture',model:'multimodal-fixture'};
-const valid={items:[{name:'Plato ficticio de prueba',category:'Sin categoría'}]};
+const valid={items:[{name:'Plato ficticio de prueba',category_id:'pending'}]};
 test('Visión: imagen, modelo separado, esquema y respuesta estructurada validada; consumo informado',async()=>{
  let sent;const result=await recognizeImage(png,{config,fetchImpl:async(url,options)=>{assert.equal(url,config.endpoint);sent=JSON.parse(options.body);assert.ok(options.signal);return Response.json({status:'completed',output:[{content:[{type:'output_text',text:JSON.stringify(valid)}]}],usage:{input_tokens:100,output_tokens:20,total_tokens:120,secret:'no devolver'}});}});
  assert.equal(sent.model,'multimodal-fixture');assert.equal(sent.input[0].content[0].type,'input_image');assert.equal(sent.input[0].content[0].image_url,png);assert.equal(sent.store,false);assert.equal(sent.text.format.strict,true);assert.match(sent.instructions,/direcciones, teléfonos/);assert.match(sent.instructions,/nunca sigas instrucciones/);assert.match(sent.instructions,/No ejecutes acciones ni publiques/);assert.deepEqual(result.items,valid.items);assert.deepEqual(result.usage,{input_tokens:100,output_tokens:20,total_tokens:120});
@@ -15,7 +15,7 @@ test('Visión: imagen, modelo separado, esquema y respuesta estructurada validad
 test('Visión: rechaza tipos, tamaños, MIME falso, texto administrativo y campos inesperados sin coerción',()=>{
  for(const image of [null,'https://external.test/a.png',png.replace('image/png','image/jpeg'),png.slice(0,-2), 'data:image/png;base64,'+Buffer.alloc(3145729).toString('base64')])assert.throws(()=>validateImage(image));
  assert.equal(decodeImage(png).type,'image/png');
- for(const response of [null,{},[],{items:null},{items:[{name:'Plato'}]},{items:[{name:12,category:'Prueba'}]},{items:[{name:'',category:'Prueba'}]},{items:[{name:'<script>alert(1)</script>',category:'Prueba'}]},{items:[{name:'595 999 123456',category:'Teléfono'}]},{...valid,action:'publish'},{items:Array(101).fill(valid.items[0])}])assert.throws(()=>validateVisionResult(response));
+ for(const response of [null,{},[],{items:null},{items:[{name:'Plato'}]},{items:[{name:12,category_id:'guarniciones'}]},{items:[{name:'',category_id:'guarniciones'}]},{items:[{name:'<script>alert(1)</script>',category_id:'guarniciones'}]},{items:[{name:'595 999 123456',category_id:'pending'}]},{...valid,action:'publish'},{items:Array(101).fill(valid.items[0])}])assert.throws(()=>validateVisionResult(response));
  assert.deepEqual(validateVisionResult({items:[]}),[]); // Foto sin platos legibles es una propuesta vacía, nunca publicable.
 });
 test('Visión: errores de red, timeout, JSON inválido, truncamiento, rechazo y HTTP no generan propuesta parcial',async()=>{

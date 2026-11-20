@@ -3,12 +3,13 @@ import {databaseV11,mockEnvironment,restBridge} from './v11-helpers.mjs';
 import {runWorker} from '../netlify/lib/worker.mjs';import api from '../netlify/functions/api.mjs';
 import {localDate,reduceOrder,activeCatalog,emptyCart} from '../shared/viejo-engine.js';
 const publish=(items,day=localDate())=>({id:uid(),day,status:'published',reviewed:true,items});
-const dish={id:'buffet-fixture',name:'Plato ficticio de prueba',category:'Prueba',available:true};
+const dish={id:'buffet-fixture',name:'Plato ficticio de prueba',category_id:'guarniciones',available:true};
 
 test('V1.1 SQL + worker: deliveries consecutivos, pausa, reactivación, A/B, cancelación y cambio de servicio',async t=>{
  const ctx=await databaseV11(),restore=mockEnvironment(),original=globalThis.fetch;const {db,rpc,one,staff,admin}=ctx;
  try{
   await db.exec(await readFile(new URL('../database/009_v11_fiabilidad.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../database/010_buffet_categories.sql',import.meta.url),'utf8'));
   await db.exec("update guarni_settings set config=jsonb_set(config,'{bot_enabled}','true')");
   await staff('menu',publish([dish]));
   const bridge=restBridge(ctx);globalThis.fetch=bridge.fetch;

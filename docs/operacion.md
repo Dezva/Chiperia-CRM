@@ -38,3 +38,7 @@ No se hizo push, publicación ni conexión a datos reales. El commit local ident
 ## Consolidación V1.1
 
 El encargado con `menu_editor` administra menús sin permiso administrativo general. La descarga de originales es autenticada y bajo demanda. [Actualización y Storage privado](revisiones/v1.1-actualizacion.md) describe la conservación configurable y la migración pendiente de fotos Base64 históricas. [Visión real](vision-real.md) define la evaluación manual autorizada; el reconocimiento simulado no demuestra precisión.
+
+## Menú V1.2
+
+El flujo principal es subir o arrastrar una foto completa → analizar → revisar la lista y categorías desplegables → confirmar y publicar. No se necesitan fotos por plato. Los ambiguos quedan pendientes/no disponibles hasta revisión. Ver [módulo de menús](menu-diario-v12.md). La mascota compartida es provisional y se sustituye desde Configuración, conservando nombre/sucursal como texto.

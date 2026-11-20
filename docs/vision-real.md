@@ -4,7 +4,7 @@ No se ejecutó esta prueba durante V1.1. Las pruebas automáticas usan respuesta
 
 ## Preparación
 
-- Elegir un proyecto Supabase y despliegue Netlify de pruebas exclusivos, sin clientes reales ni webhook de producción. Aplicar migraciones hasta 009. Crear una cuenta Auth con permiso `menu_editor` o administrador.
+- Elegir un proyecto Supabase y despliegue Netlify de pruebas exclusivos, sin clientes reales ni webhook de producción. Aplicar migraciones hasta 010. Crear una cuenta Auth con permiso `menu_editor` o administrador.
 - Mantener `BOT_ENABLED=false` y `WHATSAPP_SEND_ENABLED=false`. No se requiere habilitar WhatsApp para visión.
 - En variables seguras de **Functions**, configurar `AI_API_KEY`, `AI_BASE_URL` (HTTPS, por defecto API Responses de OpenAI) y `AI_VISION_MODEL` con un modelo multimodal compatible y vigente para la cuenta. `AI_MODEL` es independiente para conversación. También se aceptan las variables OPENAI_* de compatibilidad. No pegar claves en el navegador, repositorio ni chat.
 - La compatibilidad implementada es **API Responses con entrada input_image y salida JSON Schema**. Un proveedor que solo ofrezca Chat Completions necesita otro adaptador; no basta cambiar la URL. Modelo y endpoint no se toman de prompts.
@@ -16,7 +16,7 @@ No se ejecutó esta prueba durante V1.1. Las pruebas automáticas usan respuesta
 1. Iniciar sesión como encargado autorizado; Menú del buffet → Cargar menú.
 2. Elegir una foto PNG/JPEG/WebP real del buffet de hasta 3 MB. El archivo se valida por tamaño, Base64 canónico y firma del tipo declarado; el proveedor aún puede rechazar archivos dañados que cumplan esas comprobaciones.
 3. Solicitar reconocimiento. La foto se envía solo desde el backend al modelo de visión, con `store:false`. Timeout del proveedor 45 s. No se usa el modelo conversacional para la imagen.
-4. Revisar platos y categorías frente al original: fechas, teléfonos, direcciones, logotipos, publicidad y adornos no deberían aparecer como productos. Anotar omisiones, nombres ambiguos e inclusiones incorrectas. La instrucción al modelo ayuda a separar alimentos, pero su precisión y resistencia semántica a instrucciones dentro de fotos requieren esta evaluación real.
+4. Revisar todos los platos de la foto completa y sus category_id frente al original: fechas, teléfonos, direcciones, logotipos, publicidad y adornos no deberían aparecer como productos. Anotar omisiones, nombres ambiguos e inclusiones incorrectas. La instrucción al modelo ayuda a separar alimentos, pero su precisión y resistencia semántica a instrucciones dentro de fotos requieren esta evaluación real.
 5. Comprobar que no se publicó nada por recibir una propuesta. Corregir manualmente. Guardar un borrador o publicar solo tras marcar revisión humana. El servidor vuelve a exigir revisión.
 6. Consultar en la misma conversación del simulador/entorno aislado y comprobar menú vigente. Si el bot externo sigue apagado, usar las pruebas de worker locales para esta verificación sin enviar mensajes.
 7. Repetir reconocimiento de la misma imagen con igual proveedor/modelo/esquema: debe devolver `cached=true` sin otra inferencia. Cambiar el modelo utiliza otra clave de caché. Un resultado almacenado no mide una inferencia nueva.
@@ -41,3 +41,7 @@ Requiere Node 22+. El script llama exclusivamente a `/.netlify/functions/menu-re
 ## Cierre
 
 Desactivar `AI_IMAGE_ENABLED`, retirar la variable de sesión y revisar consumo de la cuenta. Mantener WhatsApp apagado. Si la foto contiene datos sensibles, aplicar la política de conservación autorizada. Una prueba correcta de visión no demuestra autorización del negocio para producción, precisión sobre todas las fotos, entrega de WhatsApp ni validez de otras credenciales.
+
+## Esquema V1.2
+
+La salida usa name y category_id, con enum guarniciones, carne, pollo_chancho, pending. pending no es una cuarta categoría: representa clasificación por revisar y empieza no disponible. La foto completa se envía en una única llamada; no se recorta por plato. El límite es 100 platos y 7.000 tokens máximos de salida; una respuesta truncada se rechaza y debe revisarse/reintentarse manualmente. El caché cambia a menu-v3-fixed-categories, por lo que no reutiliza propuestas antiguas de categorías libres. Revisar especialmente los platos ambiguos y corregir solo lo necesario antes de publicar. No se ejecutó esta prueba real ni se midió precisión en esta revisión.

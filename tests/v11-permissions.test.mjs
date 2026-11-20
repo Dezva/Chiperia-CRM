@@ -5,7 +5,7 @@ test('V1.1 menu_editor: permiso y revocación en API, visión, upload, RPC y RLS
  const c=await databaseV11(),restore=mockEnvironment(),saved=globalThis.fetch;let actor=c.employee;
  try{
   const bridge=restBridge(c,{actor:()=>actor});globalThis.fetch=bridge.fetch;
-  const menu={id:uid(),day:localDate(),status:'published',reviewed:true,image:png,items:[{id:'p',name:'Plato ficticio',category:'Prueba',available:true}]};
+  const menu={id:uid(),day:localDate(),status:'published',reviewed:true,image:png,items:[{id:'p',name:'Plato ficticio',category_id:'guarniciones',available:true}]};
   const req=data=>new Request('https://crm.test/api',{method:'POST',headers:{authorization:'Bearer fixture'},body:JSON.stringify({action:'menu',data})});
   assert.equal((await api(req(menu))).status,403);
   await assert.rejects(()=>c.staff('menu',menu,c.employee),/menu_permission_required/);

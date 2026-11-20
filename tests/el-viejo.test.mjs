@@ -2,7 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';import {rea
 import {defaults,reduceOrder,emptyCart,quote,confirmation,activeCatalog,localDate,availability} from '../shared/viejo-engine.js';
 import {validateImage} from '../netlify/functions/menu-recognize.mjs';
 const catalog=JSON.parse(await readFile(new URL('../catalogo-el-viejo.json',import.meta.url)));
-const now=new Date('2026-11-20T15:30:00Z'),menus=[{day:localDate(now),status:'published',items:[{id:'fixture',name:'Plato ficticio de prueba',category:'Prueba',available:true}]}];
+const now=new Date('2026-11-20T15:30:00Z'),menus=[{day:localDate(now),status:'published',items:[{id:'fixture',name:'Plato ficticio de prueba',category_id:'guarniciones',available:true}]}];
 const chip=catalog[0];
 test('Catálogo confirmado: 28 productos con precio, 3 panes dulces inactivos; bollo no se inventa',()=>{assert.equal(catalog.length,31);assert.equal(catalog.filter(x=>x.price>0).length,28);assert.ok(catalog.filter(x=>x.seasonal).every(x=>x.price===null&&!x.available));assert.equal(catalog.some(x=>x.name==='Bollo'),false);});
 test('Selección y cambio de servicio conserva carritos separados sin mezclar precios',()=>{let c=reduceOrder({text:'hola',catalog,now}).cart;assert.equal(c.service,null);c=reduceOrder({text:'chipería',cart:c,catalog,now}).cart;c=reduceOrder({text:'3 tradicional',cart:c,catalog,now,command:{intent:'update_cart',items:[{variant_id:chip.id,qty:3}]}}).cart;assert.equal(c.subtotal,10500);c=reduceOrder({text:'buffet',cart:c,catalog,menus,now}).cart;assert.equal(c.items.length,0);c=reduceOrder({text:'chipería',cart:c,catalog,menus,now}).cart;assert.equal(c.items[0].qty,3);});

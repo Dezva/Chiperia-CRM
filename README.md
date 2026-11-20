@@ -1,8 +1,10 @@
-# El Viejo CRM · Villeta V1.1
+# El Viejo CRM · Villeta V1.2
 
 Proyecto independiente para Buffet El Viejo y Chipería El Viejo, Ruta Villeta–Alberdi. Adaptado de Guarnipitan sin modificar ese repositorio ni conectarse a sus datos.
 
 V1.1 consolida la implementación existente: ubicación residual, permiso `menu_editor`, sincronización de menú, validación de visión y preparación de fotos privadas. [Actualizar sin perder datos](docs/revisiones/v1.1-actualizacion.md) · [Prueba de visión real](docs/vision-real.md) · [Validación V1.1](docs/revisiones/v1.1-validacion.md).
+
+V1.2 prioriza una foto del menú completo, revisión en página completa, tres categorías oficiales y mascota provisional configurable. [Módulo de menú](docs/menu-diario-v12.md) · [Actualización V1.2](docs/revisiones/v1.2-actualizacion.md) · [Validación V1.2](docs/revisiones/v1.2-validacion.md).
 
 ## Empezar con la demo
 
