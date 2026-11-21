@@ -12,6 +12,8 @@ export default async request=>{
   const m=await member(request);
   if(request.method==='GET'){
    const url=new URL(request.url);const chat=url.searchParams.get('conversation_id');
+   if(url.searchParams.get('pending_orders')==='1')return json({orders:await rpc('viejo_pending_orders',{})});
+   if(url.searchParams.has('order_id')){const id=url.searchParams.get('order_id');if(!uuid(id))return json({error:'Pedido inválido.'},400);const rows=await db('/rest/v1/guarni_orders?id=eq.'+id+'&select=*,delivery_location:guarni_locations!delivery_location_id(*)');if(!rows.length)return json({error:'El pedido ya no existe.'},404);const [history,clients]=await Promise.all([db('/rest/v1/viejo_history?order_id=eq.'+id+'&order=created_at.desc'),db('/rest/v1/crm_clients?id=eq.'+rows[0].client_id+'&select=id,name,phone')]);return json({order:rows[0],history,client:clients[0]});}
    const locationId=url.searchParams.get('location_orders'),orderId=url.searchParams.get('order_locations');
    if(locationId||orderId){
     if(!uuid(locationId||orderId))return json({error:'Registro inválido.'},400);
@@ -42,15 +44,15 @@ export default async request=>{
     }
     return json({messages:messages.reverse()});
    }
-   const [clients,conversations,orders,catalog,settings,members,menus,history,categories]=await Promise.all([
+   const [clients,conversations,orders,catalog,settings,members,menus,history,categories,pendingOrders]=await Promise.all([
     db('/rest/v1/crm_clients?select=id,name,phone,email,notes,status,created_at&order=created_at.desc&limit=1000'),
     db('/rest/v1/guarni_conversations?select=id,client_id,wa_id,mode,owner_id,revision,unread,last_inbound_at,updated_at,cart,draft_location_id&order=updated_at.desc&limit=500'),
     db('/rest/v1/guarni_orders?order=created_at.desc&limit=500&select=*,delivery_location:guarni_locations!delivery_location_id(*)'),
     db('/rest/v1/guarni_catalog?order=category,name,variant'),
     db('/rest/v1/guarni_settings?id=eq.true'),
-    db('/rest/v1/crm_members?select=user_id,display_name,role,catalog_editor,menu_editor'),db('/rest/v1/viejo_menus?select=id,day,status,items,created_by,created_at,photo_id,has_legacy_image&order=created_at.desc&limit=90'),db('/rest/v1/viejo_history?order=created_at.desc&limit=2000'),db('/rest/v1/viejo_catalog_categories?order=position,name')
+    db('/rest/v1/crm_members?select=user_id,display_name,role,catalog_editor,menu_editor'),db('/rest/v1/viejo_menus?select=id,day,status,items,created_by,created_at,photo_id,has_legacy_image&order=created_at.desc&limit=90'),db('/rest/v1/viejo_history?order=created_at.desc&limit=2000'),db('/rest/v1/viejo_catalog_categories?order=position,name'),rpc('viejo_pending_orders',{})
    ]);
-   return json({photoStorageEnabled:env('MENU_PHOTO_STORAGE_ENABLED')==='true',member:m,clients,conversations,orders,catalog:withCategories(catalog,categories),categories,settings:{...settings[0]?.config},members,menus,history});
+   return json({photoStorageEnabled:env('MENU_PHOTO_STORAGE_ENABLED')==='true',member:m,clients,conversations,orders,catalog:withCategories(catalog,categories),categories,pendingOrders,settings:{...settings[0]?.config},members,menus,history});
   }
   if(request.method!=='POST')return json({error:'method_not_allowed'},405);
   const raw=await request.text();if(raw.length>4500000)return json({error:'Solicitud demasiado grande.'},413);

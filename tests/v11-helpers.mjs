@@ -9,6 +9,7 @@ export async function databaseV11({categories=true,settings=true,individual=true
  if(categories&&settings)await db.exec(await readFile(new URL('../database/011_configuracion_ux.sql',import.meta.url),'utf8'));
  if(categories&&settings&&individual)await db.exec(await readFile(new URL('../database/012_catalogo_individual.sql',import.meta.url),'utf8'));
  if(categories&&settings&&individual)await db.exec(await readFile(new URL('../database/013_metricas_ia.sql',import.meta.url),'utf8'));
+ if(categories&&settings&&individual)await db.exec(await readFile(new URL('../database/014_avisos_pedidos.sql',import.meta.url),'utf8'));
  const admin=randomUUID(),editor=randomUUID(),employee=randomUUID();
  for(const [id,role,menu] of [[admin,'admin',false],[editor,'member',true],[employee,'member',false]]){
   await db.query('insert into auth.users values($1,$2)',[id,id+'@example.test']);
