@@ -15,15 +15,15 @@ La coincidencia determinista admite cantidades numéricas y las palabras uno a d
 
 ## Comparación reproducible
 
-Ejecutar `node scripts/compare-context.mjs`. El archivo [v1.4-contexto.json](revisiones/v1.4-contexto.json) compara el JSON de contexto anterior (carrito, registros completos disponibles y configuración) con el contexto compacto para los mismos datos iniciales V1.3. No mide instrucciones, esquema ni el mensaje del usuario.
+Ejecutar `node scripts/compare-context.mjs`. El archivo [v1.4-contexto.json](revisiones/v1.4-contexto.json) compara el JSON de contexto anterior (carrito, las siete columnas de catálogo disponibles que seleccionaba la rama base y configuración) con el contexto compacto para los mismos datos iniciales V1.3. No mide instrucciones, esquema ni el mensaje del usuario.
 
 | Consulta de ejemplo | Antes (caracteres) | Después | Reducción del contexto | Recorrido |
 |---|---:|---:|---:|---|
-| dos bollitos | 10.360 | 166 | 98,4 % | Sin IA |
-| dos bollitos, tres empanadas de carne y una pastafrola | 10.360 | 599 | 94,2 % | Sin IA |
-| pasame dos bollitos bien calientes | 10.360 | 166 | 98,4 % | Candidatos; ampliación si hace falta |
-| dos empanadas | 10.360 | 383 | 96,3 % | Aclaración sin IA |
-| producto desconocido | 10.360 | 1.743 | 83,2 % | Catálogo completo compacto |
+| dos bollitos | 4.719 | 166 | 96,5 % | Sin IA |
+| dos bollitos, tres empanadas de carne y una pastafrola | 4.719 | 599 | 87,3 % | Sin IA |
+| pasame dos bollitos bien calientes | 4.719 | 166 | 96,5 % | Candidatos; ampliación si hace falta |
+| dos empanadas | 4.719 | 383 | 91,9 % | Aclaración sin IA |
+| producto desconocido | 4.719 | 1.743 | 63,1 % | Catálogo completo compacto |
 
 Son **caracteres, no tokens facturados ni ahorro de costos**. Las consultas deterministas no envían ese contexto. No se llamó a un proveedor real, por lo que no hay comparación de consumo real disponible. La reducción puede variar al crecer el catálogo y al ampliar candidatos.
 

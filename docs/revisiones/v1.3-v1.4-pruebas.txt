@@ -1,0 +1,15 @@
+Entorno local: Node v24.22.1, pnpm 11.25.0, Chromium headless y PGlite.
+Comandos: pnpm build; pnpm test
+Build: correcto, 31 registros de demo.
+
+ℹ tests 104
+ℹ suites 0
+ℹ pass 102
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 2
+ℹ todo 0
+ℹ duration_ms 71374.731269
+
+Sin servicios externos reales. Las dos omisiones son contratos heredados de UI antigua.
+GitHub Actions: consulta remota bloqueada por Forbidden; no se verificó CI.

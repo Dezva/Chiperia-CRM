@@ -24,7 +24,7 @@ export function migrateCatalogDemo(d){
  for(const p of d.catalog){const c=find(p.category);p.category_id=c.id;p.active=p.active??(p.price!==null);p.aliases??=[];p.created_at??=p.updated_at||new Date().toISOString();p.updated_at??=p.created_at;
  if(p.id==='facturas-base'&&categoryKey(p.name)==='facturas'){p.legacy_generic=true;p.active=false;p.available=false;}
  if(['pasta-frola-base','bollito-base'].includes(p.id)&&categoryKey(p.category)==='otros')p.category_id=INITIAL_CATEGORIES[6].id;
- if(p.id==='pasta-frola-base'&&!p.aliases.length)p.aliases=['Pastafrola'];
+ if(p.id==='pasta-frola-base'&&categoryKey(p.name)==='pasta frola'&&!p.aliases.length)p.aliases=['Pastafrola'];
  p.category=d.categories.find(c=>c.id===p.category_id).name;
  }d.catalogMigrationV13=true;
 }

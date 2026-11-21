@@ -1,50 +1,50 @@
 {
-  "measurement": "Caracteres JSON de contexto, no tokens facturados. Datos iniciales de demo; no se llamó a IA.",
+  "measurement": "Caracteres JSON de contexto, no tokens facturados. Mismos datos comerciales de demo; antes usa las siete columnas de catálogo enviadas por 0ea4d30. No se llamó a IA.",
   "actual_provider_tokens": null,
   "results": [
     {
       "query": "dos bollitos",
       "catalog_records": 31,
       "candidates": 1,
-      "before_chars": 10360,
+      "before_chars": 4719,
       "after_chars": 166,
-      "reduction_percent": 98.4,
+      "reduction_percent": 96.5,
       "deterministic": true
     },
     {
       "query": "dos bollitos y tres empanadas de carne y una pastafrola",
       "catalog_records": 31,
       "candidates": 9,
-      "before_chars": 10360,
+      "before_chars": 4719,
       "after_chars": 599,
-      "reduction_percent": 94.2,
+      "reduction_percent": 87.3,
       "deterministic": true
     },
     {
       "query": "pasame dos bollitos bien calientes",
       "catalog_records": 31,
       "candidates": 1,
-      "before_chars": 10360,
+      "before_chars": 4719,
       "after_chars": 166,
-      "reduction_percent": 98.4,
+      "reduction_percent": 96.5,
       "deterministic": false
     },
     {
       "query": "dos empanadas",
       "catalog_records": 31,
       "candidates": 5,
-      "before_chars": 10360,
+      "before_chars": 4719,
       "after_chars": 383,
-      "reduction_percent": 96.3,
+      "reduction_percent": 91.9,
       "deterministic": true
     },
     {
       "query": "producto desconocido",
       "catalog_records": 31,
       "candidates": 31,
-      "before_chars": 10360,
+      "before_chars": 4719,
       "after_chars": 1743,
-      "reduction_percent": 83.2,
+      "reduction_percent": 63.1,
       "deterministic": false
     }
   ]

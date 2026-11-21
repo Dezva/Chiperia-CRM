@@ -11,6 +11,9 @@ create table if not exists public.viejo_catalog_categories(
 create unique index if not exists viejo_category_unique on public.viejo_catalog_categories(public.viejo_catalog_key(name));
 create table if not exists public.viejo_catalog_backup(id text primary key,product jsonb not null,created_at timestamptz not null default now());
 insert into public.viejo_catalog_backup(id,product) select id,to_jsonb(c) from public.guarni_catalog c on conflict do nothing;
+-- Semillas solo en la primera conversión; reejecutar respeta categorías eliminadas/reasignadas.
+do $$ begin
+ if not exists(select 1 from information_schema.columns where table_schema='public' and table_name='guarni_catalog' and column_name='category_id') then
 insert into public.viejo_catalog_categories(id,name,position) values('chiperia-0','Chipas',0) on conflict do nothing;
 insert into public.viejo_catalog_categories(id,name,position) values('chiperia-1','Chipas rellenas',1) on conflict do nothing;
 insert into public.viejo_catalog_categories(id,name,position) values('chiperia-2','Empanadas',2) on conflict do nothing;
@@ -24,6 +27,8 @@ insert into public.viejo_catalog_categories(id,name,position) values('chiperia-8
 insert into public.viejo_catalog_categories(id,name,position)
  select 'legacy-'||md5(public.viejo_catalog_key(category)),min(btrim(category)),100 from public.guarni_catalog
  where public.viejo_catalog_key(category)<>'temporada' group by public.viejo_catalog_key(category) on conflict do nothing;
+ end if;
+end $$;
 alter table public.guarni_catalog add column if not exists category_id text references public.viejo_catalog_categories(id);
 alter table public.guarni_catalog add column if not exists active boolean not null default true;
 alter table public.guarni_catalog add column if not exists aliases jsonb not null default '[]' check(jsonb_typeof(aliases)='array');
@@ -31,7 +36,7 @@ alter table public.guarni_catalog add column if not exists legacy_generic boolea
 alter table public.guarni_catalog add column if not exists created_at timestamptz not null default now();
 -- Solo los registros aún no convertidos. Reejecutar no restaura disponibilidad, sinónimos ni ediciones.
 update public.guarni_catalog p set category_id=c.id,active=case when p.price is null then false else p.active end,
- aliases=case when p.id='pasta-frola-base' and p.aliases='[]' then '["Pastafrola"]'::jsonb else p.aliases end
+ aliases=case when p.id='pasta-frola-base' and public.viejo_catalog_key(p.name)='pasta frola' and p.aliases='[]' then '["Pastafrola"]'::jsonb else p.aliases end
  from public.viejo_catalog_categories c where p.category_id is null and public.viejo_catalog_key(c.name)=
  case when public.viejo_catalog_key(p.category)='temporada' then 'productos de temporada'
  when p.id in ('pasta-frola-base','bollito-base') and public.viejo_catalog_key(p.category)='otros' then 'facturas' else public.viejo_catalog_key(p.category) end;

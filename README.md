@@ -8,6 +8,8 @@ V1.2 prioriza una foto del menú completo, revisión en página completa, tres c
 
 La rama `feat/configuracion-amigable` añade días visuales, tres estados de delivery y pagos seleccionables. [Cambios, migración 011, pruebas y capturas](docs/configuracion-amigable.md).
 
+V1.3/V1.4 añade catálogo comercial por producto, categorías editables, sinónimos, interpretación compacta y avisos de pedidos. [Catálogo](docs/catalogo-v13.md) · [Optimización y métricas](docs/optimizacion-v14.md) · [Alertas](docs/alertas-v14.md) · [Actualización y Windows](docs/revisiones/v1.3-v1.4.md).
+
 ## Empezar con la demo
 
 Node.js 24 LTS (mínimo 22), pnpm 11.25.0. No requiere credenciales.

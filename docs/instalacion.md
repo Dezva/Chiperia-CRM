@@ -38,6 +38,9 @@ Crear un proyecto **nuevo** exclusivo para El Viejo Villeta. Ejecutar con SQL Ed
 7. `database/009_v11_fiabilidad.sql`
 8. `database/010_buffet_categories.sql`
 9. `database/011_configuracion_ux.sql`
+10. `database/012_catalogo_individual.sql`
+11. `database/013_metricas_ia.sql`
+12. `database/014_avisos_pedidos.sql`
 
 003 está reservado; no carga productos del bar original. 004 es una plantilla para autorizar usuarios, no una migración automática. Desactivar registro público, crear/invitar la primera cuenta en Supabase Auth y autorizarla con 004 cambiando el correo, nombre y rol a `admin`. Posteriores cuentas Auth se autorizan desde Usuarios del CRM. Configurar Site URL y Redirect URLs; completar contraseña desde los mecanismos de Auth. No hay pantalla propia para invitaciones/restablecimiento.
 
@@ -84,3 +87,7 @@ Aplicar solo 010 antes del nuevo backend/frontend; revisar los ítems pendientes
 ## Configuración amigable sobre V1.2
 
 Aplicar solo 011 antes de usar el código de `feat/configuracion-amigable`. Conserva los horarios existentes, hace explícitos los estados de delivery y añade validaciones del servidor. Ver [cambios, migración, pruebas y capturas](configuracion-amigable.md). No volver a aplicar migraciones anteriores después de 011.
+
+## Actualizar desde Configuración amigable a V1.3/V1.4
+
+Aplicar únicamente 012, 013 y 014, en ese orden, antes del código de `feat/catalogo-alertas-v1.3-v1.4`. Ver [guía incremental, comandos Windows, pruebas y límites](revisiones/v1.3-v1.4.md). Las migraciones anteriores no se vuelven a ejecutar.
