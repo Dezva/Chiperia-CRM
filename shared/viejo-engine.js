@@ -1,3 +1,5 @@
+import {deterministicOrder} from './catalog-matching.js';
+import {sellable} from './catalog.js';
 import {deliveryMode,WEEK_DAYS} from './settings.js';
 import {CATEGORY_IDS} from './buffet-categories.js';
 import {normalize,fulfillmentChoice,isConfirmation} from './order-engine.js';
@@ -30,7 +32,7 @@ export function quote(items,service,catalog){
  const seen=new Set();
  const lines=items.map(x=>{
   const p=catalog.find(p=>p.id===x.variant_id&&p.service===service);
-  if(!p||!p.available||(service==='chiperia'&&!price(p)))throw Error('Producto inactivo, agotado o sin precio confirmado.');
+  if(!p||!p.available||(service==='chiperia'&&!sellable(p)))throw Error('Producto inactivo, agotado o sin precio confirmado.');
   if(!Number.isSafeInteger(x.qty)||x.qty<1||x.qty>30)throw Error('La cantidad debe ser entre 1 y 30.');
   if(seen.has(p.id))throw Error('Agrupá las cantidades del mismo producto.');seen.add(p.id);
   return {variant_id:p.id,name:p.name,variant:p.variant||'Base',qty:x.qty,unit_price:service==='buffet'?null:p.price,notes:String(x.notes||'').slice(0,300)};
@@ -59,8 +61,7 @@ export function demoCommand(text,cart,catalog){
  const t=normalize(text),choice=fulfillmentChoice(text);
  if(choice)return {intent:'summary',fulfillment:choice};
  if(/menu|catalogo|carta/.test(t))return {intent:'menu'};
- const matches=catalog.filter(p=>t.includes(normalize(p.name+(p.variant&&p.variant!=='Base'?' '+p.variant:'')))).sort((a,b)=>(b.name+b.variant).length-(a.name+a.variant).length);
- if(matches.length){const p=matches[0];return {intent:'update_cart',items:[...(cart?.items||[]).filter(x=>x.variant_id!==p.id),{variant_id:p.id,qty:Number(t.match(/\b(\d+)\b/)?.[1]||1)}]};}
+ const resolved=deterministicOrder(text,cart,catalog);if(resolved.command)return resolved.command;
  return {intent:'help'};
 }
 export function reduceOrder({text,cart:old,catalog,menus=[],command={},profileName='',settings=defaults,now=new Date()}){
@@ -70,6 +71,7 @@ export function reduceOrder({text,cart:old,catalog,menus=[],command={},profileNa
  if(selected&&selected!==cart.service){const initialPoint=cart.service?null:cart.delivery_location_id;const saved=cart.saved_carts||{};if(cart.service)saved[cart.service]={...cart,delivery_location_id:null,saved_carts:{}};cart={...emptyCart(profileName,selected),...saved[selected],service:selected,saved_carts:saved,delivery_location_id:initialPoint};command={intent:'menu'};}
  if(!cart.service)return {cart,kind:'reply',reply:greeting};
  const list=activeCatalog(cart.service,catalog,menus,now);
+ if(command.intent==='clarify')return {cart,kind:'reply',reply:command.message};
  if(/\b(humano|persona|encargado|empleado)\b/.test(normalize(text))||command.intent==='human')return {cart,kind:'human',reply:'El equipo continuará la atención. El asistente queda pausado.'};
  if(['/cancelar','/reiniciar','cancelar pedido'].includes(normalize(text)))return {cart:emptyCart(profileName,cart.service),kind:'reply',reply:'Borrador cancelado. Conservamos el historial.'};
  if(!list.length&&cart.service==='buffet')return {cart,kind:'reply',reply:'Todavía no hay menú del buffet confirmado para hoy. Podés pedir atención del encargado.'};
@@ -89,7 +91,7 @@ export function reduceOrder({text,cart:old,catalog,menus=[],command={},profileNa
   const warning=availability(cart.service,cart.fulfillment,settings,now);
   return {cart,kind:'submit',reply:'Solicitud pendiente de revisión humana.'+(warning?' '+warning:'')};
  }
- if(command.intent==='menu')return {cart,kind:'reply',reply:list.filter(p=>p.available&&(cart.service==='buffet'||price(p))).map(p=>p.name+(p.variant&&p.variant!=='Base'?' · '+p.variant:'')+(cart.service==='chiperia'?': '+money(p.price):'')).join('\n')+'\n'+(cart.service==='buffet'?'El encargado acuerda los precios finales.':'Elegí productos y cantidades. El local confirma cada pedido.')};
+ if(command.intent==='menu')return {cart,kind:'reply',reply:list.filter(p=>p.available&&(cart.service==='buffet'||sellable(p))).map(p=>p.name+(p.variant&&p.variant!=='Base'?' · '+p.variant:'')+(cart.service==='chiperia'?': '+money(p.price):'')).join('\n')+'\n'+(cart.service==='buffet'?'El encargado acuerda los precios finales.':'Elegí productos y cantidades. El local confirma cada pedido.')};
  if(command.intent==='info'){
   const hours=settings.schedules[cart.service],days=WEEK_DAYS.filter(d=>hours.days.includes(d.value)).map(d=>d.label).join(', '),mode=deliveryMode(settings,cart.service);
   const delivery=mode==='disabled'?'Delivery deshabilitado para este servicio.':mode==='pending'?'Horario de delivery pendiente: el equipo debe coordinar antes de aceptar una entrega.':'Delivery: '+hours.delivery_open+'–'+hours.delivery_close+'. El equipo confirma disponibilidad y costo.';

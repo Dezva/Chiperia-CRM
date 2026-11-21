@@ -14,7 +14,7 @@ test('V1.1 menu_editor: permiso y revocación en API, visión, upload, RPC y RLS
   await c.staff('member',{id:c.employee,display_name:'Encargado',role:'member',menu_editor:true});actor=c.employee;
   assert.equal((await api(req(menu))).status,200);
   for(const action of ['settings','member'])await assert.rejects(()=>c.staff(action,{config:{}},actor),/admin_required/);
-  await assert.rejects(()=>c.staff('catalog',{id:'x'},actor),/admin_required/);
+  await assert.rejects(()=>c.staff('catalog',{id:'x'},actor),/catalog_permission_required/);
   const mutation={...menu,id:uid(),source_menu_id:menu.id,image:'',items:[{...menu.items[0],available:false}]};await c.staff('menu',mutation,actor);
   assert.equal((await c.one('select image from viejo_menus where id=$1',[mutation.id])).image,png);
   assert.equal((await c.one('select count(*)::int n from viejo_menus')).n,2);

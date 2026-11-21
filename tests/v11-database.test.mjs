@@ -11,6 +11,7 @@ test('V1.1 SQL + worker: deliveries consecutivos, pausa, reactivación, A/B, can
   await db.exec(await readFile(new URL('../database/009_v11_fiabilidad.sql',import.meta.url),'utf8'));
   await db.exec(await readFile(new URL('../database/010_buffet_categories.sql',import.meta.url),'utf8'));
   await db.exec(await readFile(new URL('../database/011_configuracion_ux.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../database/012_catalogo_individual.sql',import.meta.url),'utf8'));
   await db.exec("update guarni_settings set config=jsonb_set(config,'{bot_enabled}','true')");
   await staff('menu',publish([dish]));
   const bridge=restBridge(ctx);globalThis.fetch=bridge.fetch;

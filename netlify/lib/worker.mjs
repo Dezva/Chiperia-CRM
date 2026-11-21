@@ -1,3 +1,5 @@
+import {deterministicOrder} from '../../shared/catalog-matching.js';
+import {withCategories} from '../../shared/catalog.js';
 import {providerConfig} from '../../shared/ai-provider.js';
 import {randomUUID} from 'node:crypto';
 import {env,db,rpc,extractText} from './platform.mjs';
@@ -52,7 +54,8 @@ export async function runWorker({budgetMs=45000}={}){
    else if(/^\[Contenido (location|live_location) recibido:/.test(job.message.body))result={kind:'reply',cart:c.cart,reply:'Para adjuntar la ubicación a tu pedido, enviame tu ubicación actual puntual desde WhatsApp 📍.'};
    else if(job.message.body.startsWith('[Contenido '))result={kind:'human',cart:c.cart,reply:'Recibí un archivo. El equipo continuará la atención por este chat.'};
    else {
-    const [catalog,client,menus]=await Promise.all([db('/rest/v1/guarni_catalog?select=id,name,variant,category,price,available,service'),db('/rest/v1/crm_clients?id=eq.'+c.client_id+'&select=name'),db('/rest/v1/viejo_menus?status=eq.published&day=eq.'+localDate()+'&select=id,day,status,items')]);
+    const [rawCatalog,client,menus,categories]=await Promise.all([db('/rest/v1/guarni_catalog?select=id,name,variant,category,category_id,price,available,active,seasonal,aliases,legacy_generic,service'),db('/rest/v1/crm_clients?id=eq.'+c.client_id+'&select=name'),db('/rest/v1/viejo_menus?status=eq.published&day=eq.'+localDate()+'&select=id,day,status,items'),db('/rest/v1/viejo_catalog_categories?order=position,name')]);
+    const catalog=withCategories(rawCatalog,categories);
     const text=job.message.body;const cart={...(c.cart?.items?c.cart:emptyCart(client[0]?.name)),delivery_location_id:c.draft_location_id||null};
     let command;
     if(config.bot_enabled!==true){result={kind:'ignore',cart,reply:''};}
@@ -61,7 +64,7 @@ export async function runWorker({budgetMs=45000}={}){
     else if(/^(men[uú]|carta|cat[aá]logo)[.!?]?$/i.test(text.trim()))command={intent:'menu'};
     else if(fulfillmentChoice(text))command={intent:'summary',fulfillment:fulfillmentChoice(text)};
     else if(!isConfirmation(text)&&!['/cancelar','/reiniciar','cancelar pedido'].includes(text.toLowerCase())&&!/\b(humano|persona|encargado|empleado)\b/i.test(text)){
-     try{command=await interpret(text,cart,activeCatalog(cart.service,catalog,menus),config);}catch{command={intent:'human'};}
+     try{command=deterministicOrder(text,cart,activeCatalog(cart.service,catalog,menus)).command||await interpret(text,cart,activeCatalog(cart.service,catalog,menus),config);}catch{command={intent:'human'};}
     }
     result=reduceOrder({text,cart,catalog,command,profileName:client[0]?.name,settings:config,menus});
     }

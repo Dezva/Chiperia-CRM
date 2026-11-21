@@ -150,7 +150,7 @@ test('Worker: las respuestas de modalidad conservan productos sin IA y los fallo
    if(endpoint.includes('guarni_settings?'))return Response.json([{config:{bot_enabled:true}}]);
    if(endpoint.endsWith('guarni_claim')){if(claimed)return Response.json(null);claimed=true;return Response.json({kind:'inbound',job:{id:'job'},conversation:{id:'chat',mode:'bot',revision:0,client_id:'client',cart:{...quote('retiro').cart,service:'chiperia'}},message:{content_type:'text',body:'delivery'}});}
    if(endpoint.includes('guarni_catalog?'))return Response.json(catalog.map(p=>({...p,service:'chiperia'})));
-   if(endpoint.includes('viejo_menus?'))return Response.json([]);
+   if(endpoint.includes('viejo_menus?')||endpoint.includes('viejo_catalog_categories?'))return Response.json([]);
    if(endpoint.includes('guarni_settings?'))return Response.json([{config:{bot_enabled:true}}]);
    if(endpoint.includes('crm_clients?'))return Response.json([{name:'Ana'}]);
    assert.match(endpoint,/guarni_finish$/);finished=JSON.parse(options.body);return Response.json({ok:true});
