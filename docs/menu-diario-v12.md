@@ -35,3 +35,7 @@ La instrucción pide ignorar teléfonos, direcciones, fechas, publicidad, logoti
 Se conserva caché por imagen/proveedor/modelo/versión, almacenamiento privado opcional, acceso autenticado a originales y las puertas de activación. La demo **no usa IA externa ni afirma reconocer una foto**: permite cargarla y transcribir/revisar manualmente. Las pruebas de reconocimiento utilizan un proveedor simulado.
 
 Ver [prueba autorizada de visión real](vision-real.md) y [actualización V1.2](revisiones/v1.2-actualizacion.md).
+
+## Íconos de categorías
+
+El editor y el menú publicado comparten íconos SVG, colores y etiquetas: carne, muslo, arroz e interrogación. Se muestran en tarjetas, selectores, chips y pendientes, siempre con texto. El selector conserva las cuatro opciones y sus IDs originales. Ver [capturas y verificación de la mejora visual](revisiones/v1.2-iconos-categorias.md).
