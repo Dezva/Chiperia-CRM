@@ -8,6 +8,7 @@ export async function databaseV11({categories=true,settings=true,individual=true
  if(categories)await db.exec(await readFile(new URL('../database/010_buffet_categories.sql',import.meta.url),'utf8'));
  if(categories&&settings)await db.exec(await readFile(new URL('../database/011_configuracion_ux.sql',import.meta.url),'utf8'));
  if(categories&&settings&&individual)await db.exec(await readFile(new URL('../database/012_catalogo_individual.sql',import.meta.url),'utf8'));
+ if(categories&&settings&&individual)await db.exec(await readFile(new URL('../database/013_metricas_ia.sql',import.meta.url),'utf8'));
  const admin=randomUUID(),editor=randomUUID(),employee=randomUUID();
  for(const [id,role,menu] of [[admin,'admin',false],[editor,'member',true],[employee,'member',false]]){
   await db.query('insert into auth.users values($1,$2)',[id,id+'@example.test']);
@@ -37,7 +38,8 @@ export function restBridge(context,{actor=context.admin,onAI}={}){
     return Response.json(result);
    }
    const table=url.pathname.split('/').at(-1);
-   if(!['crm_clients','crm_members','guarni_catalog','guarni_settings','guarni_conversations','guarni_orders','guarni_messages','guarni_jobs','viejo_menus','viejo_history','viejo_catalog_categories'].includes(table))throw Error('Tabla no permitida: '+table);
+   if(!['crm_clients','crm_members','guarni_catalog','guarni_settings','guarni_conversations','guarni_orders','guarni_messages','guarni_jobs','viejo_menus','viejo_history','viejo_catalog_categories','viejo_ai_usage'].includes(table))throw Error('Tabla no permitida: '+table);
+   if(table==='viejo_ai_usage'&&options.method==='POST'){await db.query('insert into viejo_ai_usage(id,model,operation,input_tokens,output_tokens,total_tokens,context_chars,created_at) values($1,$2,$3,$4,$5,$6,$7,$8)',[body.id,body.model,body.operation,body.input_tokens??null,body.output_tokens??null,body.total_tokens??null,body.context_chars??null,body.created_at]);return Response.json(null);}
    let select=url.searchParams.get('select')||'*';if(!/^[a-z_,*]+$/.test(select))throw Error('SELECT no soportado en prueba');
    const args=[],where=[];
    for(const [key,value] of url.searchParams){if(['select','order','limit'].includes(key))continue;if(!/^[a-z_]+$/.test(key)||!value.startsWith('eq.'))throw Error('Filtro no soportado: '+key);args.push(value.slice(3));where.push(key+'=$'+args.length);}

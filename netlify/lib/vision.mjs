@@ -1,3 +1,4 @@
+import {recordUsage} from './ai-metrics.mjs';
 import {createHash} from 'node:crypto';
 import {CATEGORY_IDS} from '../../shared/buffet-categories.js';
 import {extractText} from './platform.mjs';
@@ -46,6 +47,7 @@ export async function recognizeImage(image,{config,fetchImpl=globalThis.fetch,ti
   if (!response.ok) throw visionError('vision_provider_error','El proveedor no pudo procesar la fotografía. Revisá su configuración o disponibilidad.',response.status===429?503:502);
   let data;
   try { data=await response.json(); } catch { throw visionError('invalid_vision_response','El proveedor no devolvió JSON válido.'); }
+  await recordUsage({model:typeof data.model==='string'?data.model:config.model,operation:'vision',usage:data.usage});
   if (data.status && data.status!=='completed' || data.error || (data.output||[]).some(o=>(o.content||[]).some(c=>c.type==='refusal'))) throw visionError('incomplete_vision_response','El proveedor rechazó o no completó el reconocimiento. No se guardó una propuesta parcial.');
   let proposal;
   try { proposal=JSON.parse(extractText(data)); } catch { throw visionError('invalid_vision_response','El proveedor no devolvió una lista estructurada de platos.'); }

@@ -1,4 +1,4 @@
-import {deterministicOrder} from './catalog-matching.js';
+import {deterministicConversation} from './conversation-context.js';
 import {sellable} from './catalog.js';
 import {deliveryMode,WEEK_DAYS} from './settings.js';
 import {CATEGORY_IDS} from './buffet-categories.js';
@@ -61,7 +61,7 @@ export function demoCommand(text,cart,catalog){
  const t=normalize(text),choice=fulfillmentChoice(text);
  if(choice)return {intent:'summary',fulfillment:choice};
  if(/menu|catalogo|carta/.test(t))return {intent:'menu'};
- const resolved=deterministicOrder(text,cart,catalog);if(resolved.command)return resolved.command;
+ const resolved=deterministicConversation(text,cart,catalog);if(resolved)return resolved;
  return {intent:'help'};
 }
 export function reduceOrder({text,cart:old,catalog,menus=[],command={},profileName='',settings=defaults,now=new Date()}){

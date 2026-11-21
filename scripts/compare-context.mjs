@@ -1,0 +1,7 @@
+import {readFile,writeFile} from 'node:fs/promises';
+import {migrateCatalogDemo,withCategories} from '../shared/catalog.js';import {defaults,emptyCart} from '../shared/viejo-engine.js';import {recoverCandidates,compactContext,deterministicConversation} from '../shared/conversation-context.js';
+const demo={catalog:JSON.parse(await readFile(new URL('../catalogo-el-viejo.json',import.meta.url)))};migrateCatalogDemo(demo);const catalog=withCategories(demo.catalog,demo.categories),cart=emptyCart('','chiperia');
+const scenarios=['dos bollitos','dos bollitos y tres empanadas de carne y una pastafrola','pasame dos bollitos bien calientes','dos empanadas','producto desconocido'];
+const results=scenarios.map(query=>{const candidates=recoverCandidates(query,cart,catalog),before=JSON.stringify({cart,catalog:catalog.filter(p=>p.available),settings:defaults}),after=JSON.stringify(compactContext(cart,candidates,defaults));return {query,catalog_records:catalog.length,candidates:candidates.length,before_chars:before.length,after_chars:after.length,reduction_percent:Number((100*(1-after.length/before.length)).toFixed(1)),deterministic:!!deterministicConversation(query,cart,catalog)};});
+const report={measurement:'Caracteres JSON de contexto, no tokens facturados. Datos iniciales de demo; no se llamó a IA.',actual_provider_tokens:null,results};
+const output=JSON.stringify(report,null,2)+'\n';if(process.argv[2])await writeFile(process.argv[2],output);else process.stdout.write(output);
