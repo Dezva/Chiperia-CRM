@@ -17,8 +17,8 @@ async function send(job,token){
  const m=job.message,c=job.conversation;
  // Última comprobación después de la reserva; una toma humana invalida respuestas del bot.
  if(m.actor==='bot'){
-  const current=await db('/rest/v1/guarni_conversations?id=eq.'+c.id+'&select=mode,revision');
-  if(current[0]?.mode!=='bot'||current[0]?.revision!==m.revision){await rpc('guarni_sent',{p_token:token,p_message:m.id,p_status:'cancelled'});return;}
+  const [current,settings]=await Promise.all([db('/rest/v1/guarni_conversations?id=eq.'+c.id+'&select=mode,revision'),db('/rest/v1/guarni_settings?id=eq.true')]);
+  if(current[0]?.mode!=='bot'||current[0]?.revision!==m.revision||env('BOT_ENABLED')!=='true'||settings[0]?.config?.bot_enabled!==true){await rpc('guarni_sent',{p_token:token,p_message:m.id,p_status:'cancelled'});return;}
  }
  let status='uncertain',external=null,error=null;
  const version=env('WHATSAPP_GRAPH_VERSION'),phone=env('WHATSAPP_PHONE_NUMBER_ID'),key=env('WHATSAPP_TOKEN');
@@ -39,19 +39,21 @@ export async function runWorker({budgetMs=45000}={}){
   if(job.kind==='send'){await send(job,token);count++;continue;}
   const c=job.conversation;
   try{
+   const settings=await db('/rest/v1/guarni_settings?id=eq.true');
+   const config={...defaults,...settings[0]?.config};
+   const botEnabled=env('BOT_ENABLED')==='true'&&config.bot_enabled===true;
    if(['location','invalid_location','live_location'].includes(job.message.content_type)){
-    await rpc('guarni_process_location',{p_token:token,p_job:job.job.id,p_reply_enabled:env('BOT_ENABLED')==='true'});
+    await rpc('guarni_process_location',{p_token:token,p_job:job.job.id,p_reply_enabled:botEnabled});
     count++;
     continue;
    }
    let result;
-   if(c.mode==='human'||env('BOT_ENABLED')!=='true')result={kind:'ignore',cart:c.cart,reply:''};
+   if(c.mode==='human'||!botEnabled)result={kind:'ignore',cart:c.cart,reply:''};
    else if(/^\[Contenido (location|live_location) recibido:/.test(job.message.body))result={kind:'reply',cart:c.cart,reply:'Para adjuntar la ubicación a tu pedido, enviame tu ubicación actual puntual desde WhatsApp 📍.'};
    else if(job.message.body.startsWith('[Contenido '))result={kind:'human',cart:c.cart,reply:'Recibí un archivo. El equipo continuará la atención por este chat.'};
    else {
-    const [catalog,settings,client,menus]=await Promise.all([db('/rest/v1/guarni_catalog?select=id,name,variant,category,price,available,service'),db('/rest/v1/guarni_settings?id=eq.true'),db('/rest/v1/crm_clients?id=eq.'+c.client_id+'&select=name'),db('/rest/v1/viejo_menus?status=eq.published&day=eq.'+localDate()+'&select=id,day,status,items')]);
+    const [catalog,client,menus]=await Promise.all([db('/rest/v1/guarni_catalog?select=id,name,variant,category,price,available,service'),db('/rest/v1/crm_clients?id=eq.'+c.client_id+'&select=name'),db('/rest/v1/viejo_menus?status=eq.published&day=eq.'+localDate()+'&select=id,day,status,items')]);
     const text=job.message.body;const cart={...(c.cart?.items?c.cart:emptyCart(client[0]?.name)),delivery_location_id:c.draft_location_id||null};
-    const config={...defaults,...settings[0]?.config};
     let command;
     if(config.bot_enabled!==true){result={kind:'ignore',cart,reply:''};}
     else {

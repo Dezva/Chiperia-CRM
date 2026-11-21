@@ -1,11 +1,12 @@
 import {PGlite} from '@electric-sql/pglite';
 import {readFile} from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
-export async function databaseV11({categories=true}={}){
+export async function databaseV11({categories=true,settings=true}={}){
  const db=new PGlite({initialMemory:128*1024*1024});
  await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create table auth.users(id uuid primary key,email text);create function auth.uid() returns uuid language sql as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema auth to authenticated;`);
  for(const name of ['001_base_crm','002_guarnipitan','005_eliminacion_admin','006_ubicaciones_delivery','007_el_viejo','008_catalogo_el_viejo','009_v11_fiabilidad'])await db.exec(await readFile(new URL('../database/'+name+'.sql',import.meta.url),'utf8'));
  if(categories)await db.exec(await readFile(new URL('../database/010_buffet_categories.sql',import.meta.url),'utf8'));
+ if(categories&&settings)await db.exec(await readFile(new URL('../database/011_configuracion_ux.sql',import.meta.url),'utf8'));
  const admin=randomUUID(),editor=randomUUID(),employee=randomUUID();
  for(const [id,role,menu] of [[admin,'admin',false],[editor,'member',true],[employee,'member',false]]){
   await db.query('insert into auth.users values($1,$2)',[id,id+'@example.test']);

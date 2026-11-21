@@ -66,7 +66,8 @@ test('Webhook: punto firmado se guarda por RPC estructurada, sin texto de archiv
  try{
   Object.assign(process.env,{META_APP_SECRET:'app-secret',WHATSAPP_PHONE_NUMBER_ID:'123',WORKER_SECRET:'',SUPABASE_URL:'https://example.supabase.co',SUPABASE_SECRET_KEY:'test-secret'});
   console.info=(...args)=>logs.push(args.join(' '));console.warn=console.info;
-  globalThis.fetch=async(endpoint,options)=>{assert.match(endpoint,/guarni_ingest_location$/);saved.push(JSON.parse(options.body));return Response.json({duplicate:saved.length>1});};
+  globalThis.fetch=async(endpoint,options)=>{
+    if(endpoint.includes('guarni_settings?'))return Response.json([{config:{bot_enabled:true}}]);assert.match(endpoint,/guarni_ingest_location$/);saved.push(JSON.parse(options.body));return Response.json({duplicate:saved.length>1});};
   const payload=JSON.stringify({entry:[{changes:[{value:{metadata:{phone_number_id:'123'},messages:[{type:'location',from:'595000000101',id:'wamid.location',timestamp:'1794747600',location:point}]}}]}]});
   const signed=()=>new Request('https://example.test/whatsapp',{method:'POST',body:payload,headers:{'x-hub-signature-256':'sha256='+createHmac('sha256','app-secret').update(payload).digest('hex')}});
   assert.equal((await (await webhook(signed())).json()).accepted,1);assert.equal((await (await webhook(signed())).json()).duplicates,1);
@@ -83,6 +84,7 @@ test('Worker: ubicaciones válidas, inválidas y de tiempo real evitan IA y cons
   for(const type of ['location','invalid_location','live_location'])for(const mode of ['bot','human']){
    let claimed=false,processed=false;
    globalThis.fetch=async(endpoint,options)=>{
+    if(endpoint.includes('guarni_settings?'))return Response.json([{config:{bot_enabled:true}}]);
     if(endpoint.endsWith('guarni_claim')){if(claimed)return Response.json(null);claimed=true;return Response.json({kind:'inbound',job:{id:'job-id'},conversation:{id:'chat-id',mode,cart:emptyCart()},message:{content_type:type,body:'Ubicación puntual recibida.'}});}
     assert.match(endpoint,/guarni_process_location$/);assert.equal(JSON.parse(options.body).p_job,'job-id');processed=true;return Response.json({association:'draft'});
    };
@@ -129,6 +131,7 @@ test('API: asignar ubicaciones utiliza el integrante validado y conserva la apro
  try{
   Object.assign(process.env,{SUPABASE_URL:'https://example.supabase.co',SUPABASE_SECRET_KEY:'test-secret'});
   globalThis.fetch=async(endpoint,options={})=>{
+   if(endpoint.includes('guarni_settings?'))return Response.json([{config:{bot_enabled:true}}]);
    if(endpoint.includes('/auth/v1/user'))return Response.json({id:'verified-member'});
    if(endpoint.includes('crm_members?'))return Response.json([{user_id:'verified-member',role:'member'}]);
    assert.match(endpoint,/guarni_assign_location$/);saved=JSON.parse(options.body);return Response.json({ok:true});
@@ -144,6 +147,7 @@ test('Worker: las respuestas de modalidad conservan productos sin IA y los fallo
   Object.assign(process.env,{SUPABASE_URL:'https://example.supabase.co',SUPABASE_SECRET_KEY:'test-secret',BOT_ENABLED:'true'});
   let claimed=false,finished;
   globalThis.fetch=async(endpoint,options={})=>{
+   if(endpoint.includes('guarni_settings?'))return Response.json([{config:{bot_enabled:true}}]);
    if(endpoint.endsWith('guarni_claim')){if(claimed)return Response.json(null);claimed=true;return Response.json({kind:'inbound',job:{id:'job'},conversation:{id:'chat',mode:'bot',revision:0,client_id:'client',cart:{...quote('retiro').cart,service:'chiperia'}},message:{content_type:'text',body:'delivery'}});}
    if(endpoint.includes('guarni_catalog?'))return Response.json(catalog.map(p=>({...p,service:'chiperia'})));
    if(endpoint.includes('viejo_menus?'))return Response.json([]);
@@ -154,6 +158,7 @@ test('Worker: las respuestas de modalidad conservan productos sin IA y los fallo
   await runWorker();assert.equal(finished.p_cart.items.length,1);assert.equal(finished.p_cart.items[0].qty,2);assert.equal(finished.p_cart.fulfillment,'delivery');assert.match(finished.p_body,/ubicación puntual/);
   claimed=false;let retried=false;
   globalThis.fetch=async(endpoint,options={})=>{
+   if(endpoint.includes('guarni_settings?'))return Response.json([{config:{bot_enabled:true}}]);
    if(endpoint.endsWith('guarni_claim')){if(claimed)return Response.json(null);claimed=true;return Response.json({kind:'inbound',job:{id:'recoverable-job'},conversation:{id:'chat',mode:'bot'},message:{content_type:'location',body:'Ubicación puntual recibida.'}});}
    if(endpoint.endsWith('guarni_process_location'))return Response.json({message:'temporary_failure'},{status:503});
    assert.match(endpoint,/guarni_retry$/);assert.equal(JSON.parse(options.body).p_job,'recoverable-job');retried=true;return Response.json(null);

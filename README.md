@@ -6,6 +6,8 @@ V1.1 consolida la implementación existente: ubicación residual, permiso `menu_
 
 V1.2 prioriza una foto del menú completo, revisión en página completa, tres categorías oficiales y mascota provisional configurable. [Módulo de menú](docs/menu-diario-v12.md) · [Actualización V1.2](docs/revisiones/v1.2-actualizacion.md) · [Validación V1.2](docs/revisiones/v1.2-validacion.md).
 
+La rama `feat/configuracion-amigable` añade días visuales, tres estados de delivery y pagos seleccionables. [Cambios, migración 011, pruebas y capturas](docs/configuracion-amigable.md).
+
 ## Empezar con la demo
 
 Node.js 24 LTS (mínimo 22), pnpm 11.25.0. No requiere credenciales.

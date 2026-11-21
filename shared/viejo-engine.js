@@ -1,9 +1,10 @@
+import {deliveryMode,WEEK_DAYS} from './settings.js';
 import {CATEGORY_IDS} from './buffet-categories.js';
 import {normalize,fulfillmentChoice,isConfirmation} from './order-engine.js';
 export {normalize,isConfirmation,fulfillmentChoice};
 export const money=n=>n==null?'Pendiente':new Intl.NumberFormat('es-PY').format(n)+' Gs.';
 export const greeting='¡Buenas! Bienvenido a El Viejo. ¿Querés consultar o hacer un pedido del buffet o de la chipería?';
-export const defaults={business_name:'El Viejo',branch:'Ruta Villeta–Alberdi',logo_url:'assets/abuelito-provisional.png',timezone:'America/Asuncion',bot_enabled:false,payment_methods:['Efectivo','Tarjeta de débito','Tarjeta de crédito','QR','Transferencia'],fulfillment_modes:['retiro','delivery'],schedules:{buffet:{days:[1,2,3,4,5,6],open:'11:00',close:'15:00',delivery_open:'12:00',delivery_close:'14:00'},chiperia:{days:[1,2,3,4,5,6],open:'05:15',close:'18:30',delivery_open:null,delivery_close:null}},reference_prices:{guarniciones:40000,carne:80000,pollo_chancho:75000}};
+export const defaults={business_name:'El Viejo',branch:'Ruta Villeta–Alberdi',logo_url:'assets/abuelito-provisional.png',timezone:'America/Asuncion',bot_enabled:false,payment_methods:['Efectivo','Tarjeta de débito','Tarjeta de crédito','QR','Transferencia'],fulfillment_modes:['retiro','delivery'],schedules:{buffet:{days:[1,2,3,4,5,6],open:'11:00',close:'15:00',delivery_mode:'scheduled',delivery_open:'12:00',delivery_close:'14:00'},chiperia:{days:[1,2,3,4,5,6],open:'05:15',close:'18:30',delivery_mode:'pending',delivery_open:null,delivery_close:null}},reference_prices:{guarniciones:40000,carne:80000,pollo_chancho:75000}};
 export function localDate(now=new Date()){return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Asuncion',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);}
 export function serviceChoice(text){const t=normalize(text);const b=/\bbuffet\b/.test(t),c=/\bchiperia\b/.test(t);return b&&c?'mixed':b?'buffet':c?'chiperia':null;}
 export function emptyCart(name='',service=null){return {items:[],service,customer_name:name,fulfillment:'a_coordinar',address:'',payment:'a_coordinar',quoted:false,delivery_location_id:null,saved_carts:{}};}
@@ -12,6 +13,9 @@ export function activeCatalog(service,catalog,menus=[],now=new Date()){
  return catalog.filter(p=>p.service==='chiperia');
 }
 export function availability(service,fulfillment,settings=defaults,now=new Date()){
+ const mode=deliveryMode(settings,service);
+ if(fulfillment==='delivery'&&mode==='disabled')return 'El delivery está deshabilitado para este servicio. El equipo puede ayudarte a coordinar otra modalidad.';
+ if(fulfillment==='delivery'&&mode==='pending')return 'El horario de delivery está pendiente de confirmación. El equipo debe coordinarlo antes de aceptar.';
  const s=settings.schedules?.[service]||defaults.schedules[service];
  const parts=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'America/Asuncion',weekday:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(now).map(p=>[p.type,p.value]));
  const day=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(parts.weekday),time=parts.hour+':'+parts.minute;
@@ -34,6 +38,7 @@ export function quote(items,service,catalog){
  return {items:lines,subtotal:service==='buffet'?null:lines.reduce((s,x)=>s+x.qty*x.unit_price,0)};
 }
 export function confirmation(order,input,catalog,{mode,owner_id,actor,menus=[],now=new Date(),settings=defaults}={}){
+ if(input.fulfillment==='delivery'&&deliveryMode(settings,order.service)==='disabled')throw Error('El delivery está deshabilitado para este servicio.');
  const q=quote(order.items,order.service,activeCatalog(order.service,catalog,menus,now));
  if(!['retiro','delivery'].includes(input.fulfillment))throw Error('Confirmá retiro o delivery.');
  if(order.fulfillment!==input.fulfillment)throw Error('Revisá la modalidad del pedido antes de confirmar.');
@@ -79,12 +84,18 @@ export function reduceOrder({text,cart:old,catalog,menus=[],command={},profileNa
   let fresh;try{fresh=quote(cart.items,cart.service,list);}catch{return {cart:{...cart,quoted:false},kind:'reply',reply:'Cambió la disponibilidad del catálogo. Revisá los productos con el equipo.'};}
   if(!cart.quoted||!sameItems(fresh.items,cart.items)){cart={...cart,...fresh,quoted:true};return {cart,kind:'reply',reply:'Revisá el resumen actualizado:\n'+summary(cart)+'\nEscribí CONFIRMAR PEDIDO.'};}
   if(!['retiro','delivery'].includes(cart.fulfillment))return {cart,kind:'reply',reply:'¿Será retiro o delivery?'};
+  if(cart.fulfillment==='delivery'&&deliveryMode(settings,cart.service)==='disabled')return {cart,kind:'reply',reply:'El delivery está deshabilitado para este servicio. Elegí retiro o pedí atención del equipo.'};
   if(cart.fulfillment==='delivery'&&(!cart.delivery_location_id||cart.address.trim().length<3))return {cart,kind:'reply',reply:'Enviá tu ubicación puntual de WhatsApp y una referencia para el delivery.'};
   const warning=availability(cart.service,cart.fulfillment,settings,now);
   return {cart,kind:'submit',reply:'Solicitud pendiente de revisión humana.'+(warning?' '+warning:'')};
  }
  if(command.intent==='menu')return {cart,kind:'reply',reply:list.filter(p=>p.available&&(cart.service==='buffet'||price(p))).map(p=>p.name+(p.variant&&p.variant!=='Base'?' · '+p.variant:'')+(cart.service==='chiperia'?': '+money(p.price):'')).join('\n')+'\n'+(cart.service==='buffet'?'El encargado acuerda los precios finales.':'Elegí productos y cantidades. El local confirma cada pedido.')};
- if(command.intent==='info')return {cart,kind:'reply',reply:'Horarios: '+JSON.stringify(settings.schedules[cart.service])+'. Pagos: '+settings.payment_methods.join(', ')+'. Delivery sujeto a revisión; costo definido por el equipo.'};
+ if(command.intent==='info'){
+  const hours=settings.schedules[cart.service],days=WEEK_DAYS.filter(d=>hours.days.includes(d.value)).map(d=>d.label).join(', '),mode=deliveryMode(settings,cart.service);
+  const delivery=mode==='disabled'?'Delivery deshabilitado para este servicio.':mode==='pending'?'Horario de delivery pendiente: el equipo debe coordinar antes de aceptar una entrega.':'Delivery: '+hours.delivery_open+'–'+hours.delivery_close+'. El equipo confirma disponibilidad y costo.';
+  return {cart,kind:'reply',reply:'Atención: '+days+', '+hours.open+'–'+hours.close+'.\n'+delivery+'\nPagos: '+(settings.payment_methods.join(', ')||'a coordinar con el equipo')+'.'};
+ }
+
  if(cart.items.length){cart.quoted=true;return {cart,kind:'reply',reply:summary(cart)+'\n'+(cart.fulfillment==='a_coordinar'?'¿Será retiro o delivery?':cart.fulfillment==='delivery'&&!cart.delivery_location_id?'Enviá tu ubicación puntual de WhatsApp y referencia.':'Escribí CONFIRMAR PEDIDO para solicitar revisión del local.')};}
  return {cart,kind:'reply',reply:'Servicio activo: '+cart.service+'. Escribí MENÚ para consultar los productos o el nombre del otro servicio para cambiar.'};
 }

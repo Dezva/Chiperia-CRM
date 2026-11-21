@@ -37,6 +37,7 @@ Crear un proyecto **nuevo** exclusivo para El Viejo Villeta. Ejecutar con SQL Ed
 6. `database/008_catalogo_el_viejo.sql`
 7. `database/009_v11_fiabilidad.sql`
 8. `database/010_buffet_categories.sql`
+9. `database/011_configuracion_ux.sql`
 
 003 está reservado; no carga productos del bar original. 004 es una plantilla para autorizar usuarios, no una migración automática. Desactivar registro público, crear/invitar la primera cuenta en Supabase Auth y autorizarla con 004 cambiando el correo, nombre y rol a `admin`. Posteriores cuentas Auth se autorizan desde Usuarios del CRM. Configurar Site URL y Redirect URLs; completar contraseña desde los mecanismos de Auth. No hay pantalla propia para invitaciones/restablecimiento.
 
@@ -79,3 +80,7 @@ Aplicar únicamente 009 antes del backend/frontend V1.1, siguiendo [la guía inc
 ## Actualizar desde V1.1 a V1.2
 
 Aplicar solo 010 antes del nuevo backend/frontend; revisar los ítems pendientes que deje la conversión conservadora. Seguir [actualización V1.2](revisiones/v1.2-actualizacion.md) y [menú por fotografía](menu-diario-v12.md). Los menús nuevos requieren category_id oficial, no textos libres.
+
+## Configuración amigable sobre V1.2
+
+Aplicar solo 011 antes de usar el código de `feat/configuracion-amigable`. Conserva los horarios existentes, hace explícitos los estados de delivery y añade validaciones del servidor. Ver [cambios, migración, pruebas y capturas](configuracion-amigable.md). No volver a aplicar migraciones anteriores después de 011.
