@@ -54,7 +54,7 @@ export async function runWorker({budgetMs=45000}={}){
     else if(/^(men[uú]|carta|cat[aá]logo)[.!?]?$/i.test(text.trim()))command={intent:'menu'};
     else if(fulfillmentChoice(text))command={intent:'summary',fulfillment:fulfillmentChoice(text)};
     else if(!isConfirmation(text)&&!['/cancelar','/reiniciar','cancelar pedido'].includes(text.toLowerCase())&&!/\b(humano|persona|encargado|empleado)\b/i.test(text)){
-     try{command=deterministicConversation(text,cart,activeCatalog(cart.service,catalog,menus))||await interpret(text,cart,activeCatalog(cart.service,catalog,menus),config);}catch{command={intent:'human'};}
+     try{command=deterministicConversation(text,cart,activeCatalog(cart.service,catalog,menus),{categories:cart.service==='chiperia'?categories:[]})||await interpret(text,cart,activeCatalog(cart.service,catalog,menus),config);}catch{command={intent:'human'};}
     }
     result=reduceOrder({text,cart,catalog,command,profileName:client[0]?.name,settings:config,menus});
     }

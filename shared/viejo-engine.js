@@ -57,11 +57,11 @@ export function confirmation(order,input,catalog,{mode,owner_id,actor,menus=[],n
 }
 export function sameItems(a,b){const fields=['variant_id','name','variant','qty','unit_price','notes'];return JSON.stringify(a.map(x=>fields.map(k=>x[k])))===JSON.stringify(b.map(x=>fields.map(k=>x[k])));}
 export function summary(cart){return cart.items.map(x=>`${x.qty} × ${x.name}${x.variant==='Base'?'':' · '+x.variant}${cart.service==='chiperia'?': '+money(x.qty*x.unit_price):''}`).join('\n')+'\n'+(cart.service==='buffet'?'Buffet: importe pendiente; el encargado lo acordará con vos.':'Subtotal: '+money(cart.items.reduce((s,x)=>s+x.qty*x.unit_price,0)))+'\nModalidad: '+cart.fulfillment+'. Envío pendiente de revisión.';}
-export function demoCommand(text,cart,catalog){
+export function demoCommand(text,cart,catalog,categories=[]){
  const t=normalize(text),choice=fulfillmentChoice(text);
  if(choice)return {intent:'summary',fulfillment:choice};
  if(/menu|catalogo|carta/.test(t))return {intent:'menu'};
- const resolved=deterministicConversation(text,cart,catalog);if(resolved)return resolved;
+ const resolved=deterministicConversation(text,cart,catalog,{categories});if(resolved)return resolved;
  return {intent:'help'};
 }
 export function reduceOrder({text,cart:old,catalog,menus=[],command={},profileName='',settings=defaults,now=new Date()}){
@@ -71,11 +71,13 @@ export function reduceOrder({text,cart:old,catalog,menus=[],command={},profileNa
  if(selected&&selected!==cart.service){const initialPoint=cart.service?null:cart.delivery_location_id;const saved=cart.saved_carts||{};if(cart.service)saved[cart.service]={...cart,delivery_location_id:null,saved_carts:{}};cart={...emptyCart(profileName,selected),...saved[selected],service:selected,saved_carts:saved,delivery_location_id:initialPoint};command={intent:'menu'};}
  if(!cart.service)return {cart,kind:'reply',reply:greeting};
  const list=activeCatalog(cart.service,catalog,menus,now);
+ if(command.context)cart.conversation=structuredClone(command.context);
+ if(['retiro','delivery'].includes(command.fulfillment)){cart.fulfillment=command.fulfillment;if(command.fulfillment==='retiro')cart.delivery_location_id=null;}
  if(command.intent==='clarify')return {cart,kind:'reply',reply:command.message};
  if(/\b(humano|persona|encargado|empleado)\b/.test(normalize(text))||command.intent==='human')return {cart,kind:'human',reply:'El equipo continuará la atención. El asistente queda pausado.'};
  if(['/cancelar','/reiniciar','cancelar pedido'].includes(normalize(text)))return {cart:emptyCart(profileName,cart.service),kind:'reply',reply:'Borrador cancelado. Conservamos el historial.'};
  if(!list.length&&cart.service==='buffet')return {cart,kind:'reply',reply:'Todavía no hay menú del buffet confirmado para hoy. Podés pedir atención del encargado.'};
- if(command.intent==='update_cart'){cart={...cart,...quote(command.items,cart.service,list),quoted:false};}
+ if(command.intent==='update_cart'){try{cart={...cart,...quote(command.items,cart.service,list),quoted:false};}catch{return {cart:{...cart,quoted:false},kind:'reply',reply:'Cambió la disponibilidad del carrito. El equipo puede ayudarte a revisar los productos.'};}}
  const choice=fulfillmentChoice(text)||command.fulfillment;
  if(['retiro','delivery'].includes(choice)){cart.fulfillment=choice;if(choice==='retiro')cart.delivery_location_id=null;}
  if(command.address)cart.address=String(command.address).slice(0,500);
@@ -91,13 +93,16 @@ export function reduceOrder({text,cart:old,catalog,menus=[],command={},profileNa
   const warning=availability(cart.service,cart.fulfillment,settings,now);
   return {cart,kind:'submit',reply:'Solicitud pendiente de revisión humana.'+(warning?' '+warning:'')};
  }
- if(command.intent==='menu')return {cart,kind:'reply',reply:list.filter(p=>p.available&&(cart.service==='buffet'||sellable(p))).map(p=>p.name+(p.variant&&p.variant!=='Base'?' · '+p.variant:'')+(cart.service==='chiperia'?': '+money(p.price):'')).join('\n')+'\n'+(cart.service==='buffet'?'El encargado acuerda los precios finales.':'Elegí productos y cantidades. El local confirma cada pedido.')};
+ if(command.intent==='menu'){
+  const offered=list.filter(p=>(!command.category_ids?.length||command.category_ids.includes(p.category_id||p.category))&&p.available&&(cart.service==='buffet'||sellable(p)));
+  return {cart,kind:'reply',reply:offered.length?offered.map(p=>p.name+(p.variant&&p.variant!=='Base'?' · '+p.variant:'')+(cart.service==='chiperia'?': '+money(p.price):'')).join('\n')+'\n'+(cart.service==='buffet'?'El encargado acuerda los precios finales.':'Elegí productos y cantidades. El local confirma cada pedido.'):'Por ahora no hay productos disponibles'+(command.category_names?.length?' en '+command.category_names.join(' y '):' en este servicio')+'. El equipo puede ayudarte.'};
+ }
  if(command.intent==='info'){
   const hours=settings.schedules[cart.service],days=WEEK_DAYS.filter(d=>hours.days.includes(d.value)).map(d=>d.label).join(', '),mode=deliveryMode(settings,cart.service);
   const delivery=mode==='disabled'?'Delivery deshabilitado para este servicio.':mode==='pending'?'Horario de delivery pendiente: el equipo debe coordinar antes de aceptar una entrega.':'Delivery: '+hours.delivery_open+'–'+hours.delivery_close+'. El equipo confirma disponibilidad y costo.';
   return {cart,kind:'reply',reply:'Atención: '+days+', '+hours.open+'–'+hours.close+'.\n'+delivery+'\nPagos: '+(settings.payment_methods.join(', ')||'a coordinar con el equipo')+'.'};
  }
 
- if(cart.items.length){cart.quoted=true;return {cart,kind:'reply',reply:summary(cart)+'\n'+(cart.fulfillment==='a_coordinar'?'¿Será retiro o delivery?':cart.fulfillment==='delivery'&&!cart.delivery_location_id?'Enviá tu ubicación puntual de WhatsApp y referencia.':'Escribí CONFIRMAR PEDIDO para solicitar revisión del local.')};}
+ if(cart.items.length){cart.quoted=true;return {cart,kind:'reply',reply:(command.intent==='update_cart'?'¡Dale! ':'')+summary(cart)+'\n'+(cart.fulfillment==='a_coordinar'?'¿Vas a retirar o querés delivery?':cart.fulfillment==='delivery'&&!cart.delivery_location_id?'Enviá tu ubicación puntual de WhatsApp y referencia.':'Escribí CONFIRMAR PEDIDO para solicitar revisión del local.')};}
  return {cart,kind:'reply',reply:'Servicio activo: '+cart.service+'. Escribí MENÚ para consultar los productos o el nombre del otro servicio para cambiar.'};
 }

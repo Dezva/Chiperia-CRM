@@ -12,6 +12,8 @@ V1.3/V1.4 añade catálogo comercial por producto, categorías editables, sinón
 
 V1.5 presenta un inicio de sesión independiente con la identidad de El Viejo. [Cambios, capturas, pruebas y actualización del sitio Netlify](docs/revisiones/v1.5-login.md). No requiere migraciones.
 
+V1.6 corrige consultas por categoría, variantes y correcciones conversacionales, y añade limpieza segura del historial y eliminación administrativa de clientes. [Guía, migración 015, pruebas y capturas](docs/revisiones/v1.6-conversacion-historial.md).
+
 ## Empezar con la demo
 
 Node.js 24 LTS (mínimo 22), pnpm 11.25.0. No requiere credenciales.
