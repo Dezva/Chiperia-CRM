@@ -10,6 +10,8 @@ La rama `feat/configuracion-amigable` añade días visuales, tres estados de del
 
 V1.3/V1.4 añade catálogo comercial por producto, categorías editables, sinónimos, interpretación compacta y avisos de pedidos. [Catálogo](docs/catalogo-v13.md) · [Optimización y métricas](docs/optimizacion-v14.md) · [Alertas](docs/alertas-v14.md) · [Actualización y Windows](docs/revisiones/v1.3-v1.4.md).
 
+V1.5 presenta un inicio de sesión independiente con la identidad de El Viejo. [Cambios, capturas, pruebas y actualización del sitio Netlify](docs/revisiones/v1.5-login.md). No requiere migraciones.
+
 ## Empezar con la demo
 
 Node.js 24 LTS (mínimo 22), pnpm 11.25.0. No requiere credenciales.

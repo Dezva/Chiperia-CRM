@@ -1,3 +1,5 @@
+> Resultado vigente de esta rama: [V1.5 login](docs/revisiones/v1.5-login.md), 110 pruebas: 108 aprobadas, 0 fallidas y 2 omitidas heredadas.
+
 > Para el resultado vigente de esta rama ver [validación V1.3/V1.4](docs/revisiones/v1.3-v1.4.md): 104 pruebas, 102 aprobadas y 2 omitidas heredadas. Para V1.2 ver [validación V1.2](docs/revisiones/v1.2-validacion.md). Este documento conserva la evidencia de V1.
 
 # Validación ejecutada

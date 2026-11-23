@@ -1,0 +1,15 @@
+Comandos: pnpm build; pnpm test
+Build correcto: 31 registros de demo.
+Auth/API de navegador simulados; sin credenciales ni servicios reales.
+
+ℹ tests 110
+ℹ suites 0
+ℹ pass 108
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 2
+ℹ todo 0
+ℹ duration_ms 173566.958884
+
+Las dos omisiones son heredadas de contratos de la UI antigua. No se cuentan como aprobadas.
+GitHub Actions: consulta de API respondió Forbidden; estado remoto sin verificar.
