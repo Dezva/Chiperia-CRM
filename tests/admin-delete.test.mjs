@@ -16,7 +16,7 @@ test('Eliminación: sesión, rol, tipo, UUID y confirmación se verifican antes 
   globalThis.fetch=async(endpoint,options={})=>{
    if(endpoint.endsWith('/auth/v1/user'))return Response.json({id:'admin-user'});
    if(endpoint.includes('crm_members?'))return Response.json([{user_id:'admin-user',role}]);
-   assert.match(endpoint,/(guarni_delete|viejo_delete_client)$/);deletes.push(JSON.parse(options.body));return Response.json({ok:true,orders:1});
+   assert.match(endpoint,/(viejo_delete_order|viejo_delete_client)$/);deletes.push(JSON.parse(options.body));return Response.json({ok:true,orders:1});
   };
   assert.equal((await api(request('delete_record',{kind:'order',id,confirmation:'ELIMINAR'},false))).status,401);
   for(const action of ['delete_preview','delete_record'])assert.equal((await api(request(action,{kind:'order',id,confirmation:'ELIMINAR'}))).status,403);
@@ -27,7 +27,7 @@ test('Eliminación: sesión, rol, tipo, UUID y confirmación se verifican antes 
   assert.equal((await api(request('delete_preview',{kind:'client',id:'bad-id'}))).status,400);
   assert.equal(deletes.length,0);
   assert.equal((await api(request('delete_preview',{kind:'order',id,p_actor:'forged-user',p_confirm:true}))).status,200);
-  assert.deepEqual(deletes[0],{p_actor:'admin-user',p_kind:'order',p_id:id,p_confirm:false});
+  assert.deepEqual(deletes[0],{p_actor:'admin-user',p_id:id,p_confirm:false,p_confirmation:null,p_preview_token:null,p_payment_ack:false});
   assert.equal((await api(request('delete_record',{kind:'client',id,confirmation:'ELIMINAR',preview_token:'a'.repeat(32)}))).status,200);
   assert.deepEqual(deletes[1],{p_actor:'admin-user',p_id:id,p_confirm:true,p_delete_orders:false,p_preview_token:'a'.repeat(32)});
  }finally{globalThis.fetch=oldFetch;for(const k of Object.keys(process.env))if(!(k in previous))delete process.env[k];Object.assign(process.env,previous);}

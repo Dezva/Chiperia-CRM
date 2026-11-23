@@ -7,7 +7,7 @@
     "build": "node scripts/build.mjs",
     "dev": "node scripts/dev.mjs",
     "test": "node --test --test-concurrency=1 tests/*.test.mjs",
-    "test:db": "node --test --test-concurrency=1 tests/database.test.mjs tests/location-database.test.mjs tests/viejo-database.test.mjs tests/v11-database.test.mjs tests/v11-permissions.test.mjs",
+    "test:db": "node --test --test-concurrency=1 tests/database.test.mjs tests/location-database.test.mjs tests/viejo-database.test.mjs tests/v11-database.test.mjs tests/v11-permissions.test.mjs tests/orders-v17.test.mjs",
     "test:unit": "node --test tests/order-engine.test.mjs tests/webhook.test.mjs tests/admin-delete.test.mjs tests/locations.test.mjs tests/el-viejo.test.mjs tests/integrations.test.mjs tests/v11-vision.test.mjs tests/v11-storage.test.mjs"
   },
   "engines": {

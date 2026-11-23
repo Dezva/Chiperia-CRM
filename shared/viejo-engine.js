@@ -1,4 +1,3 @@
-import {hasDeliveryReference,deliveryReferencePrompt} from './delivery-context.js';
 import {deterministicConversation} from './conversation-context.js';
 import {sellable} from './catalog.js';
 import {deliveryMode,WEEK_DAYS} from './settings.js';
@@ -45,7 +44,7 @@ export function confirmation(order,input,catalog,{mode,owner_id,actor,menus=[],n
  const q=quote(order.items,order.service,activeCatalog(order.service,catalog,menus,now));
  if(!['retiro','delivery'].includes(input.fulfillment))throw Error('Confirmá retiro o delivery.');
  if(order.fulfillment!==input.fulfillment)throw Error('Revisá la modalidad del pedido antes de confirmar.');
- if(input.fulfillment==='delivery'&&(!order.delivery_location_id||String(input.address||'').trim().length<3))throw Error('Faltan ubicación puntual y referencia.');
+ if(input.fulfillment==='delivery'&&!order.delivery_location_id)throw Error('Falta la ubicación puntual.');
  if(input.fulfillment==='delivery'&&(!Number.isSafeInteger(input.shipping_fee)||input.shipping_fee<0))throw Error('Establecé explícitamente el costo del delivery, incluso si es cero.');
  if(order.group_id&&!input.group_reviewed)throw Error('Revisá los pedidos relacionados para no duplicar el delivery.');
  const warning=availability(order.service,input.fulfillment,settings,now);if(warning&&!input.schedule_reviewed)throw Error(warning);
@@ -75,7 +74,7 @@ export function reduceOrder({text,cart:old,catalog,menus=[],command={},profileNa
  if(command.context)cart.conversation=structuredClone(command.context);
  if(['retiro','delivery'].includes(command.fulfillment)){cart.fulfillment=command.fulfillment;if(command.fulfillment==='retiro')cart.delivery_location_id=null;}
  if(command.intent==='clarify')return {cart,kind:'reply',reply:command.message};
- if(command.intent==='draft_status'){let changed=false;try{const fresh=quote(cart.items,cart.service,list);changed=!sameItems(fresh.items,cart.items);cart={...cart,...fresh,quoted:changed?false:cart.quoted};}catch{return {cart:{...cart,quoted:false},kind:'reply',reply:'Tengo tu pedido en borrador, pero cambió la disponibilidad. El equipo debe ayudarte a revisar los productos.'};}const next=cart.fulfillment==='a_coordinar'?'¿Vas a retirar o querés delivery?':cart.fulfillment==='delivery'&&!cart.delivery_location_id?'Falta tu ubicación puntual de WhatsApp.':cart.fulfillment==='delivery'&&!hasDeliveryReference(cart)?deliveryReferencePrompt:'Escribí CONFIRMAR PEDIDO para enviar la solicitud al local.';return {cart,kind:'reply',reply:'Tengo este pedido en borrador; todavía no está enviado al local:\n'+summary(cart)+'\n'+(changed?'Los precios se actualizaron. Revisá el resumen.\n':'')+next};}
+ if(command.intent==='draft_status'){let changed=false;try{const fresh=quote(cart.items,cart.service,list);changed=!sameItems(fresh.items,cart.items);cart={...cart,...fresh,quoted:changed?false:cart.quoted};}catch{return {cart:{...cart,quoted:false},kind:'reply',reply:'Tengo tu pedido en borrador, pero cambió la disponibilidad. El equipo debe ayudarte a revisar los productos.'};}const next=cart.fulfillment==='a_coordinar'?'¿Vas a retirar o querés delivery?':cart.fulfillment==='delivery'&&!cart.delivery_location_id?'Falta tu ubicación puntual de WhatsApp.':'Escribí CONFIRMAR PEDIDO para enviar la solicitud al local.';return {cart,kind:'reply',reply:'Tengo este pedido en borrador; todavía no está enviado al local:\n'+summary(cart)+'\n'+(changed?'Los precios se actualizaron. Revisá el resumen.\n':'')+next};}
  if(/\b(humano|persona|encargado|empleado)\b/.test(normalize(text))||command.intent==='human')return {cart,kind:'human',reply:'El equipo continuará la atención. El asistente queda pausado.'};
  if(['/cancelar','/reiniciar','cancelar pedido'].includes(normalize(text)))return {cart:emptyCart(profileName,cart.service),kind:'reply',reply:'Borrador cancelado. Conservamos el historial.'};
  if(!list.length&&cart.service==='buffet')return {cart,kind:'reply',reply:'Todavía no hay menú del buffet confirmado para hoy. Podés pedir atención del encargado.'};
@@ -92,7 +91,6 @@ export function reduceOrder({text,cart:old,catalog,menus=[],command={},profileNa
   if(!['retiro','delivery'].includes(cart.fulfillment))return {cart,kind:'reply',reply:'¿Será retiro o delivery?'};
   if(cart.fulfillment==='delivery'&&deliveryMode(settings,cart.service)==='disabled')return {cart,kind:'reply',reply:'El delivery está deshabilitado para este servicio. Elegí retiro o pedí atención del equipo.'};
   if(cart.fulfillment==='delivery'&&!cart.delivery_location_id)return {cart,kind:'reply',reply:'Enviá tu ubicación puntual de WhatsApp para este delivery.'};
-  if(cart.fulfillment==='delivery'&&!hasDeliveryReference(cart))return {cart,kind:'reply',reply:deliveryReferencePrompt};
   const warning=availability(cart.service,cart.fulfillment,settings,now);
   return {cart,kind:'submit',reply:'Solicitud pendiente de revisión humana.'+(warning?' '+warning:'')};
  }
@@ -106,6 +104,6 @@ export function reduceOrder({text,cart:old,catalog,menus=[],command={},profileNa
   return {cart,kind:'reply',reply:'Atención: '+days+', '+hours.open+'–'+hours.close+'.\n'+delivery+'\nPagos: '+(settings.payment_methods.join(', ')||'a coordinar con el equipo')+'.'};
  }
 
- if(cart.items.length){cart.quoted=true;return {cart,kind:'reply',reply:(command.intent==='update_cart'?'¡Dale! ':'')+summary(cart)+'\n'+(cart.fulfillment==='a_coordinar'?'¿Vas a retirar o querés delivery?':cart.fulfillment==='delivery'&&!cart.delivery_location_id?'Enviá tu ubicación puntual de WhatsApp.':cart.fulfillment==='delivery'&&!hasDeliveryReference(cart)?deliveryReferencePrompt:'Escribí CONFIRMAR PEDIDO para solicitar revisión del local.')};}
+ if(cart.items.length){cart.quoted=true;return {cart,kind:'reply',reply:(command.intent==='update_cart'?'¡Dale! ':'')+summary(cart)+'\n'+(cart.fulfillment==='a_coordinar'?'¿Vas a retirar o querés delivery?':cart.fulfillment==='delivery'&&!cart.delivery_location_id?'Enviá tu ubicación puntual de WhatsApp.':'Escribí CONFIRMAR PEDIDO para solicitar revisión del local.')};}
  return {cart,kind:'reply',reply:'Servicio activo: '+cart.service+'. Escribí MENÚ para consultar los productos o el nombre del otro servicio para cambiar.'};
 }

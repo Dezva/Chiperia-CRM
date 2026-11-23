@@ -1,19 +1,24 @@
 import {categoryKey} from './catalog.js';
 export const hasDeliveryReference=cart=>typeof cart?.address==='string'&&cart.address.trim().length>=3;
-export const deliveryReferencePrompt='Ya tengo tu ubicación 📍. Solo falta una referencia escrita para llegar: calle y número, fachada o un punto de referencia cercano.';
+export const deliveryReadyPrompt='Ya recibí tu ubicación 📍. Escribí CONFIRMAR PEDIDO para enviar tu solicitud al local. La referencia adicional es opcional.';
+export function deliveryQueryRequested(text){
+ const t=categoryKey(text),referenceStatus=/\breferencia\b/.test(t)&&(/^(?:que|cual|como|no|ya|sin|falta)\b/.test(t)||/[?¿]/.test(String(text||''))||t==='referencia');
+ return referenceStatus||/\b(?:ubicacion|localizacion)\b/.test(t)||/\bno (?:te )?(?:estoy |estaba )?pidiendo\b.*\b(?:horario|informacion)\b/.test(t)||/\bya\b.*\b(?:envi\w*|mand\w*|pase|comparti\w*)\b/.test(t);
+}
 export function deliveryStatusCommand(text,cart){
- if(cart?.fulfillment!=='delivery'||!cart.items?.length)return null;
- const t=categoryKey(text);
- if(/\bno (?:te )?(?:estoy |estaba )?pidiendo\b.*\b(?:horario|informacion)\b/.test(t)||/\b(?:ubicacion|localizacion)\b/.test(t)||/\breferencia\b/.test(t)&&(/^(?:que|cual|como|no tengo|no se|falta)\b/.test(t)||/[?¿]/.test(String(text||''))||t==='referencia')||/\bya\b.*\b(?:envi\w*|mand\w*|pas[eé]|comparti\w*)\b/.test(t)){
-  // Un texto de dirección no sustituye el evento estructurado de ubicación de WhatsApp.
-  const message=!cart.delivery_location_id?'Todavía falta una ubicación puntual válida de WhatsApp para este delivery. Enviá el punto desde Adjuntar → Ubicación.':!hasDeliveryReference(cart)?deliveryReferencePrompt:'Sí, ya tengo tu ubicación y la referencia de entrega. Escribí CONFIRMAR PEDIDO para enviar la solicitud al local.';
-  return {intent:'clarify',message};
- }
- return null;
+ if(cart?.fulfillment!=='delivery'||!cart.items?.length||!deliveryQueryRequested(text))return null;
+ return {intent:'clarify',message:cart.delivery_location_id?deliveryReadyPrompt:'Todavía falta una ubicación puntual válida de WhatsApp para este delivery. Enviá el punto desde Adjuntar → Ubicación. La referencia escrita es opcional.'};
+}
+export function registeredDeliveryCommand(order,cart){
+ if(cart.delivery_location_id)return {intent:'clarify',message:'Recibí tu nueva ubicación. Decime los productos y cantidades para preparar la solicitud.'};
+ if(order&&['delivered','cancelled','rejected'].includes(order.status))return {intent:'clarify',message:'La última solicitud #'+order.number+' ya está finalizada. Su ubicación pertenece a ese pedido anterior. Para preparar otro delivery, decime los productos y compartí un nuevo punto.'};
+ if(order?.fulfillment==='delivery')return {intent:'clarify',message:order.delivery_location_id?'Tu solicitud #'+order.number+' ya tiene la ubicación asociada. No hace falta reenviarla ni agregar una referencia. El equipo gestiona su entrega.':'La solicitud #'+order.number+' todavía necesita un punto válido de WhatsApp para el delivery. Enviá el punto desde Adjuntar → Ubicación.'};
+ return {intent:'clarify',message:cart.delivery_location_id?'Recibí tu ubicación. Decime los productos y cantidades para preparar una nueva solicitud.':'Para preparar un delivery, decime los productos y cantidades y compartí un punto válido desde Adjuntar → Ubicación. La referencia escrita es opcional.'};
 }
 export function deliveryReferenceCommand(text,cart){
- if(cart?.fulfillment!=='delivery'||!cart.items?.length||!cart.delivery_location_id||hasDeliveryReference(cart))return null;
+ if(cart?.fulfillment!=='delivery'||!cart.items?.length)return null;
  const value=String(text||'').trim(),t=categoryKey(value);
+ if(!cart.delivery_location_id&&!/^(?:referencia|porton|frente|al lado|casa|calle|avenida)\b/.test(t))return null;
  if(value.length<3||value.length>500||/^(?:hola|buenas|gracias|ok|dale|listo|si|no|no se|nose|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|confirmar pedido|confirmo pedido|delivery|retiro|menu|catalogo|carta)[.!?]*$/.test(t)||value.startsWith('/')||/[?¿]/.test(value))return null;
  return {intent:'summary',address:value};
 }
