@@ -42,6 +42,7 @@ Crear un proyecto **nuevo** exclusivo para El Viejo Villeta. Ejecutar con SQL Ed
 11. `database/013_metricas_ia.sql`
 12. `database/014_avisos_pedidos.sql`
 13. `database/015_historial_seguro.sql`
+14. `database/016_referencia_delivery.sql`
 
 003 está reservado; no carga productos del bar original. 004 es una plantilla para autorizar usuarios, no una migración automática. Desactivar registro público, crear/invitar la primera cuenta en Supabase Auth y autorizarla con 004 cambiando el correo, nombre y rol a `admin`. Posteriores cuentas Auth se autorizan desde Usuarios del CRM. Configurar Site URL y Redirect URLs; completar contraseña desde los mecanismos de Auth. No hay pantalla propia para invitaciones/restablecimiento.
 
@@ -96,3 +97,7 @@ Aplicar únicamente 012, 013 y 014, en ese orden, antes del código de `feat/cat
 ## V1.6: conversación e historial seguro
 
 Desde V1.5 aplicar únicamente 015 antes del backend/frontend compatible, siguiendo [la guía V1.6](revisiones/v1.6-conversacion-historial.md). No repetir las migraciones antiguas. La instalación no borra registros; las operaciones administrativas requieren vista previa y confirmación explícita.
+
+## V1.6.1: referencia de delivery y recuperación del pedido
+
+Desde V1.6 aplicar únicamente 016 antes del código compatible de la misma rama, siguiendo [la guía de corrección](revisiones/v1.6.1-delivery.md). No es necesario limpiar el historial ni descartar borradores. No repetir migraciones anteriores.

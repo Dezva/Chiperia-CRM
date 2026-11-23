@@ -1,9 +1,14 @@
 import {commercialText,productTerms,productName,sellable} from './catalog.js';
-export const quantityWords={un:1,uno:1,una:1,dos:2,tres:3,cuatro:4,cinco:5,seis:6,siete:7,ocho:8,nueve:9,diez:10,once:11,doce:12};
-const filler=new Set('quiero quisiera querria dame llevo llevar necesito pedir pedido agregar agrega agregame por favor y e con para el la lo los las me mi a unidad unidades unidade gracias hola buenas voy querer te dije lee lea mensaje bien'.split(' '));
-export const orderOperation=text=>/\b(?:al final|en total|cambia|cambiar|cambiame|corrige|corregi|te dije|no una|no uno)\b/.test(commercialText(text))?'set':'add';
+export const quantityWords={un:1,uno:1,una:1,dos:2,tres:3,cuatro:4,cinco:5,seis:6,siete:7,ocho:8,nueve:9,diez:10,once:11,doce:12,otro:1,otra:1};
+const filler=new Set('quiero quisiera querria dame llevo llevar necesito pedir pedido agregar agrega agregame por favor y e con para el la lo los las me mi a unidad unidades unidade gracias hola buenas voy querer solo solamente unicamente mas suma sumame sumar anade anadi te dije lee lea mensaje bien'.split(' '));
+// Una cantidad declarada establece el total; sumar requiere una intención de incremento.
+export function orderText(text){
+ let t=commercialText(text);if(/^\s*no\s*,/i.test(String(text)))t=t.replace(/^no\s+/,'');
+ return t.replace(/\bno\s+(?:[0-9]+|un|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\b.*$/,'').trim();
+}
+export function orderOperation(text){const t=orderText(text);if(/\b(?:solo|solamente|unicamente|al final|en total|cambia|cambiar|cambiame|corrige|corregi|te dije)\b/.test(t))return 'set';return /\b(?:agrega|agregame|agregar|suma|sumame|sumar|anade|anadi|mas|otro|otra)\b/.test(t)?'add':'set';}
 export function inlineFulfillment(text){const t=commercialText(text);if(/\b(?:no|sin) (?:delivery|retiro)\b/.test(t))return null;if(/\bdelivery\b|\ba domicilio\b/.test(t))return 'delivery';if(/\b(?:retiro|retirar)\b/.test(t))return 'retiro';return null;}
-function prepared(text){return commercialText(text).replace(/\b(?:lee|lea) (?:el )?mensaje(?: bien)?\b/g,' ').replace(/\b(?:deja|deje) repetir(?: el mismo mensaje)?\b/g,' ').replace(/\bpara (?:delivery|retiro|retirar)\b|\ba domicilio\b/g,' ').replace(/\bdelivery\b/g,' ').trim();}
+function prepared(text){return orderText(text).replace(/\b(?:lee|lea) (?:el )?mensaje(?: bien)?\b/g,' ').replace(/\b(?:deja|deje) repetir(?: el mismo mensaje)?\b/g,' ').replace(/\bpara (?:delivery|retiro|retirar)\b|\ba domicilio\b/g,' ').replace(/\bdelivery\b/g,' ').trim();}
 export function matchCommercial(text,catalog,{context}={}){
  const tokens=prepared(text).split(/\s+/).filter(Boolean),terms=new Map();
  function add(term,p){const list=terms.get(term)||[];list.push(p);terms.set(term,list);}
@@ -49,6 +54,7 @@ export function requestedItems(found,cart,text){
 }
 export function deterministicOrder(text,cart,catalog){
  const found=matchCommercial(text,catalog,{context:cart?.conversation}),fulfillment=inlineFulfillment(text),operation=orderOperation(text);
+ if(/^\s*no\s+(?:quiero|agreg|sum)/i.test(String(text)))return {found,command:{intent:'clarify',message:'¿Querés quitar un producto o cambiar su cantidad? Indicá el artículo y el total.'}};
  if(!found.matches.length&&!found.ambiguous.length)return {found,command:null};
  if(found.ambiguous.length){const a=found.ambiguous[0],command=clarifyOptions(a.products,a.qty,operation);command.context.pending.resolved_items=found.matches.map(m=>({id:m.product.id,qty:m.qty}));command.context.pending.remaining=found.ambiguous.slice(1).map(m=>({candidate_ids:m.products.map(p=>p.id),qty:m.qty}));return {found,command:{...command,...(fulfillment?{fulfillment}:{})}};}
  const blocked=found.matches.filter(m=>m.product.service==='buffet'?!m.product.available:!sellable(m.product));

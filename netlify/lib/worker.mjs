@@ -1,3 +1,5 @@
+import {orderStatusRequested,registeredOrderCommand} from '../../shared/order-status.js';
+import {hydrateDeliveryLocation} from '../../shared/delivery-context.js';
 import {deterministicConversation} from '../../shared/conversation-context.js';
 import {interpret} from './conversation.mjs';
 import {withCategories} from '../../shared/catalog.js';
@@ -43,13 +45,14 @@ export async function runWorker({budgetMs=45000}={}){
    else if(/^\[Contenido (location|live_location) recibido:/.test(job.message.body))result={kind:'reply',cart:c.cart,reply:'Para adjuntar la ubicación a tu pedido, enviame tu ubicación actual puntual desde WhatsApp 📍.'};
    else if(job.message.body.startsWith('[Contenido '))result={kind:'human',cart:c.cart,reply:'Recibí un archivo. El equipo continuará la atención por este chat.'};
    else {
-    const [rawCatalog,client,menus,categories]=await Promise.all([db('/rest/v1/guarni_catalog?select=id,name,variant,category,category_id,price,available,active,seasonal,aliases,legacy_generic,service'),db('/rest/v1/crm_clients?id=eq.'+c.client_id+'&select=name'),db('/rest/v1/viejo_menus?status=eq.published&day=eq.'+localDate()+'&select=id,day,status,items'),db('/rest/v1/viejo_catalog_categories?order=position,name')]);
+    const [rawCatalog,client,menus,categories,points,lastOrders]=await Promise.all([db('/rest/v1/guarni_catalog?select=id,name,variant,category,category_id,price,available,active,seasonal,aliases,legacy_generic,service'),db('/rest/v1/crm_clients?id=eq.'+c.client_id+'&select=name'),db('/rest/v1/viejo_menus?status=eq.published&day=eq.'+localDate()+'&select=id,day,status,items'),db('/rest/v1/viejo_catalog_categories?order=position,name'),c.draft_location_id?db('/rest/v1/guarni_locations?id=eq.'+c.draft_location_id+'&conversation_id=eq.'+c.id+'&select=id,address'):Promise.resolve([]),!c.cart?.items?.length&&orderStatusRequested(job.message.body)?db('/rest/v1/guarni_orders?conversation_id=eq.'+c.id+'&order=created_at.desc&limit=1&select=id,number,status,service'):Promise.resolve([])]);
     const catalog=withCategories(rawCatalog,categories);
-    const text=job.message.body;const cart={...(c.cart?.items?c.cart:emptyCart(client[0]?.name)),delivery_location_id:c.draft_location_id||null};
+    const text=job.message.body;const cart=hydrateDeliveryLocation(c.cart?.items?c.cart:emptyCart(client[0]?.name),points[0]);
     let command;
     if(config.bot_enabled!==true){result={kind:'ignore',cart,reply:''};}
     else {
-    if(!cart.service&&!serviceChoice(text))command={intent:'help'};
+    if(!cart.items?.length&&orderStatusRequested(text))command=registeredOrderCommand(text,lastOrders[0]);
+    else if(!cart.service&&!serviceChoice(text))command={intent:'help'};
     else if(serviceChoice(text))command={intent:'menu'};
     else if(/^(men[uú]|carta|cat[aá]logo)[.!?]?$/i.test(text.trim()))command={intent:'menu'};
     else if(fulfillmentChoice(text))command={intent:'summary',fulfillment:fulfillmentChoice(text)};

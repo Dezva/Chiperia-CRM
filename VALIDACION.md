@@ -1,4 +1,6 @@
-> Resultado vigente: [V1.6 conversación e historial](docs/revisiones/v1.6-conversacion-historial.md), 121 pruebas: 119 aprobadas, 0 fallidas y 2 omitidas heredadas.
+> Resultado vigente: [V1.6.1 delivery, cantidades y estado del pedido](docs/revisiones/v1.6.1-delivery.md), 126 pruebas: 124 aprobadas, 0 fallidas y 2 omisiones heredadas. Además, 5/5 regresiones reforzadas PostgreSQL/worker y unitarias.
+
+> Resultado anterior: [V1.6 conversación e historial](docs/revisiones/v1.6-conversacion-historial.md), 121 pruebas: 119 aprobadas, 0 fallidas y 2 omitidas heredadas.
 
 > Resultado anterior: [V1.5 login](docs/revisiones/v1.5-login.md), 110 pruebas: 108 aprobadas, 0 fallidas y 2 omitidas heredadas.
 
