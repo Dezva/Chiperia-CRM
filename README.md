@@ -12,6 +12,8 @@ V1.3/V1.4 añade catálogo comercial por producto, categorías editables, sinón
 
 V1.5 presenta un inicio de sesión independiente con la identidad de El Viejo. [Cambios, capturas, pruebas y actualización del sitio Netlify](docs/revisiones/v1.5-login.md). No requiere migraciones.
 
+Publicación automática autorizada: los nuevos pushes de esta rama permiten el build de Netlify, sin marca de omisión. [Configuración del build y auto publishing del sitio](docs/instalacion.md#publicación-automática-autorizada--24112026).
+
 Autenticación del worker en ASCII: corrige el descarte de `x-worker-secret` con valores Unicode y añade logs de despacho. [Diagnóstico y despliegue en Production](docs/revisiones/worker-auth-ascii.md).
 
 Retiro natural: reconoce «voy a retirar» y aclaraciones sobre la entrega, conservando el pedido y el subtotal. [Corrección, pruebas y actualización](docs/revisiones/retiro-natural.md).

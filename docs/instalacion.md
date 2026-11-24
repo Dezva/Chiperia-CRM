@@ -114,3 +114,13 @@ La actualización del [PR #1](https://github.com/Dezva/Chiperia-CRM/pull/1), en 
 ## Autenticación del worker y contextos Netlify
 
 La [corrección de autenticación ASCII](revisiones/worker-auth-ascii.md) evita enviar `WORKER_SECRET` directamente como encabezado. No requiere SQL ni rotar un secreto existente por contener Unicode. Generar un deploy de Production del nuevo commit y comprobar `workerAuth: "hmac-sha256-v1"` en health; publicar un preview anterior no incorpora esta corrección.
+
+## Publicación automática autorizada — 24/11/2026
+
+A pedido del responsable, los nuevos commits de `fix/tarifas-buffet-sin-regresion-chiperia` se publican sin la marca de omisión de Netlify. Las notas anteriores sobre despliegue exclusivamente manual describen las entregas previas y quedan sustituidas por esta autorización para esta rama.
+
+`netlify.toml` establece `build.ignore = "exit 1"`: Netlify debe continuar el build incluso cuando su comprobación de cambios pudiera omitirlo. Esto no elimina las validaciones de build ni los checks de GitHub Actions. El commit actual incluye la corrección ASCII del worker y retiro natural mediante sus commits anteriores; no requiere SQL nuevo.
+
+La rama de producción del sitio debe ser `fix/tarifas-buffet-sin-regresion-chiperia`. El push dispara la integración Git existente. Si el build queda Ready pero no pasa a Live, revisar en Netlify si está pausado auto publishing o bloqueado el deploy publicado, y usar Start auto publishing / Unlock deploys según la opción disponible. Ese ajuste pertenece al sitio de Netlify y no puede habilitarse desde el archivo TOML.
+
+Comprobar en el resultado Where: Production y el commit más reciente. Las variables siguen siendo las del contexto Production; no se modifican secretos ni credenciales desde el repositorio. Para verificar la corrección del worker, health debe mostrar `workerAuth: "hmac-sha256-v1"` y dispatch debe registrar `worker_started` tras un mensaje nuevo.
