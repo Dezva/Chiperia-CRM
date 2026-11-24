@@ -1,7 +1,7 @@
 import { BUFFET_CATEGORIES } from './buffet-categories.js';
 import { categoryKey, commercialText, productTerms } from './catalog.js';
 import { deliveryQueryRequested, deliveryReferenceCommand } from './delivery-context.js';
-import { fulfillmentChoice } from './order-engine.js';
+import { fulfillmentChoice } from './fulfillment.js';
 import { orderStatusRequested } from './order-status.js';
 
 const byName = new Map([

@@ -12,7 +12,7 @@ test('Navegador: demo completa de chipería, buffet, fotografía, intervención 
   const sim=async text=>{await page.locator('#simulateForm input').fill(text);await page.getByRole('button',{name:'Simular mensaje',exact:true}).click();};
   const close=()=>page.locator('#close').click();
   await nav('catalog');assert.equal(await page.locator('.catalog-card').count(),31);
-  await nav('chats');await page.locator('.chat-preview').first().click();await sim('hola');await sim('chipería');await sim('3 tradicional');await sim('retiro');await sim('CONFIRMAR PEDIDO');
+  await nav('chats');await page.locator('.chat-preview').first().click();await sim('hola');await sim('chipería');await sim('3 tradicional');await sim('voy a retirar');await sim('No voy a ajustar productos, voy a querer el pedido para retirar');await sim('CONFIRMAR PEDIDO');
   let d=await state();assert.equal(d.orders.length,1);assert.equal(d.orders[0].subtotal,10500);assert.equal(d.orders[0].status,'pending');
   await nav('orders');await page.getByRole('button',{name:'Ver pedido ↗'}).first().click();await page.getByRole('button',{name:'Aceptar pedido',exact:true}).click();await page.locator('[name="schedule_reviewed"]').check();await page.locator('#save').click();
   d=await state();assert.equal(d.orders[0].total,10500);assert.equal(d.orders[0].payment_status,'pending');assert.ok(d.messages.some(m=>m.body.includes('Total aprobado: 10.500')));

@@ -1,4 +1,6 @@
-> Resultado vigente del PR #1: [buffet, tarifas y pedidos sin regresión de chipería](docs/revisiones/buffet-flujo-tarifas.md). Build correcto; 145 pruebas: 143 aprobadas, 0 fallidas y 2 omisiones heredadas. Además, 13/13 específicas aprobadas; proveedores simulados y PostgreSQL local.
+> Resultado vigente: [retiro y delivery naturales](docs/revisiones/retiro-natural.md). Build correcto; 155 pruebas: 153 aprobadas, 0 fallidas y 2 omisiones heredadas. Comprobación final específica/navegador: 5/5 aprobadas.
+
+> Resultado anterior del PR #1: [buffet, tarifas y pedidos sin regresión de chipería](docs/revisiones/buffet-flujo-tarifas.md). Build correcto; 145 pruebas: 143 aprobadas, 0 fallidas y 2 omisiones heredadas. Además, 13/13 específicas aprobadas; proveedores simulados y PostgreSQL local.
 
 > Resultado anterior: [V1.7 delivery, pedidos y finanzas](docs/revisiones/v1.7-pedidos-finanzas.md), 132 pruebas: 130 aprobadas, 0 fallidas y 2 omisiones heredadas. PostgreSQL local, API/worker y Chromium en escritorio/móvil; proveedores simulados.
 

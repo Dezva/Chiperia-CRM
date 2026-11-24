@@ -1,3 +1,4 @@
+import {fulfillmentIntent} from './fulfillment.js';
 import {BUFFET_CATEGORIES} from './buffet-categories.js';
 import {referencePriceRequest} from './reference-prices.js';
 import {orderStatusRequested} from './order-status.js';
@@ -37,7 +38,18 @@ function quantityFollowup(text,cart,catalog){
  if(items.some(x=>x.qty>30))return {intent:'clarify',message:'El máximo es 30 unidades por producto.'};
  return {intent:'update_cart',items,context:{focus_ids:[id]},...(inlineFulfillment(text)?{fulfillment:inlineFulfillment(text)}:{})};
 }
+export function fulfillmentCommand(text,cart,catalog){
+ const state=fulfillmentIntent(text);if(!state.mentioned)return null;
+ if(orderStatusRequested(text)&&(state.question||/\b(?:estado|esta listo|esta preparado|como va|como esta|que falta)\b/.test(commercialText(text))))return null;
+ const found=matchCommercial(text,catalog,{context:cart?.conversation});
+ if(found.matches.length||found.ambiguous.length)return null;
+ if(state.choice)return {intent:'summary',fulfillment:state.choice};
+ // Las consultas de precios/horarios conservan su intención; no eligen modalidad.
+ if(/\b(?:precio|tarifa|cuanto|horario|costo)\b/.test(commercialText(text)))return null;
+ return {intent:'clarify',message:'¿Preferís retirar en el local o pedir delivery? Conservamos tus productos y cantidades.'};
+}
 export function deterministicConversation(text,cart,catalog,{categories=[]}={}){
+ const mode=fulfillmentCommand(text,cart,catalog);if(mode)return mode;
  if(cart?.service==='buffet'){const pricing=referencePriceRequest(text,cart,catalog);if(pricing)return pricing;}
  if(orderStatusRequested(text)&&cart?.items?.length)return {intent:'draft_status'};
  const status=deliveryStatusCommand(text,cart);if(status)return status;
@@ -66,6 +78,7 @@ export function deterministicConversation(text,cart,catalog,{categories=[]}={}){
  return found.matches.length||found.ambiguous.length?null:deliveryReferenceCommand(text,cart);
 }
 export function validateInterpretation(command,text,cart,catalog,candidates){
+ const mode=fulfillmentCommand(text,cart,catalog);if(mode)return mode;
  if(cart?.service==='buffet'&&referencePriceRequest(text,cart,catalog))return {intent:'reference_prices'};
  if(!command||typeof command!=='object'||!['update_cart','menu','info','summary','human','help'].includes(command.intent))throw Error('invalid_interpretation');
  if(command.intent==='menu'){const request=categoryRequest(text,catalog);if(request)Object.assign(command,request);else if(command.category){const group=categoryRequest(command.category,catalog);if(!group)throw Error('commercial_equivalence_unconfirmed');Object.assign(command,group);}return command;}

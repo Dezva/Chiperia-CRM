@@ -12,6 +12,8 @@ V1.3/V1.4 añade catálogo comercial por producto, categorías editables, sinón
 
 V1.5 presenta un inicio de sesión independiente con la identidad de El Viejo. [Cambios, capturas, pruebas y actualización del sitio Netlify](docs/revisiones/v1.5-login.md). No requiere migraciones.
 
+Retiro natural: reconoce «voy a retirar» y aclaraciones sobre la entrega, conservando el pedido y el subtotal. [Corrección, pruebas y actualización](docs/revisiones/retiro-natural.md).
+
 Mejora del buffet en el [PR #1](https://github.com/Dezva/Chiperia-CRM/pull/1): tarifas vigentes por kilo, consultas y pedidos diferenciados, observaciones por plato y carritos separados de chipería. [Guía y validación](docs/revisiones/buffet-flujo-tarifas.md).
 
 V1.7 hace opcional la referencia del delivery, reorganiza pedidos, separa entrega y cobro y añade períodos financieros y eliminación administrativa segura. [Guía, migraciones 016 → 017, pruebas y capturas](docs/revisiones/v1.7-pedidos-finanzas.md).

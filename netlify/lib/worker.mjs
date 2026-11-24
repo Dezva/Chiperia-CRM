@@ -2,12 +2,12 @@ import {mediaDisposition} from './whatsapp-media.mjs';
 import {referencePriceRequest} from '../../shared/reference-prices.js';
 import {orderStatusRequested,registeredOrderCommand} from '../../shared/order-status.js';
 import {hydrateDeliveryLocation,deliveryQueryRequested,registeredDeliveryCommand} from '../../shared/delivery-context.js';
-import {deterministicConversation} from '../../shared/conversation-context.js';
+import {deterministicConversation,fulfillmentCommand} from '../../shared/conversation-context.js';
 import {interpret} from './conversation.mjs';
 import {withCategories} from '../../shared/catalog.js';
 import {randomUUID} from 'node:crypto';
 import {env,db,rpc} from './platform.mjs';
-import {reduceOrder,emptyCart,isConfirmation,fulfillmentChoice,serviceChoice,activeCatalog,defaults,localDate} from '../../shared/viejo-engine.js';
+import {reduceOrder,emptyCart,isConfirmation,serviceChoice,activeCatalog,defaults,localDate} from '../../shared/viejo-engine.js';
 async function send(job,token){
  const m=job.message,c=job.conversation;
  // Última comprobación después de la reserva; una toma humana invalida respuestas del bot.
@@ -59,13 +59,14 @@ export async function runWorker({budgetMs=45000}={}){
     let command;
     if(config.bot_enabled!==true){result={kind:'ignore',cart,reply:''};}
     else {
-    if((cart.service==='buffet'||serviceChoice(text)==='buffet')&&referencePriceRequest(text,cart,activeCatalog('buffet',catalog,menus)))command={intent:'reference_prices'};
+    const mode=fulfillmentCommand(text,cart,activeCatalog(cart.service,catalog,menus));
+    if(mode)command=mode;
+    else if((cart.service==='buffet'||serviceChoice(text)==='buffet')&&referencePriceRequest(text,cart,activeCatalog('buffet',catalog,menus)))command={intent:'reference_prices'};
     else if(!cart.items?.length&&orderStatusRequested(text))command=registeredOrderCommand(text,lastOrders[0]);
     else if(!cart.items?.length&&deliveryQueryRequested(text))command=registeredDeliveryCommand(lastOrders[0],cart);
     else if(!cart.service&&!serviceChoice(text))command={intent:'help'};
     else if(serviceChoice(text))command={intent:'menu'};
     else if(/^(men[uú]|carta|cat[aá]logo)[.!?]?$/i.test(text.trim()))command={intent:'menu'};
-    else if(fulfillmentChoice(text))command={intent:'summary',fulfillment:fulfillmentChoice(text)};
     else if(!isConfirmation(text)&&!['/cancelar','/reiniciar','cancelar pedido'].includes(text.toLowerCase())&&!/\b(humano|persona|encargado|empleado)\b/i.test(text)){
      try{command=deterministicConversation(text,cart,activeCatalog(cart.service,catalog,menus),{categories:cart.service==='chiperia'?categories:[]})||await interpret(text,cart,activeCatalog(cart.service,catalog,menus),config);}catch{command={intent:'human'};}
     }
