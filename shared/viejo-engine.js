@@ -57,7 +57,10 @@ export function confirmation(order,input,catalog,{mode,owner_id,actor,menus=[],n
  return {...q,subtotal:amount,shipping_fee:fee,total:amount+fee};
 }
 export function sameItems(a,b){const fields=['variant_id','name','variant','qty','unit_price','notes'];return JSON.stringify(a.map(x=>fields.map(k=>x[k])))===JSON.stringify(b.map(x=>fields.map(k=>x[k])));}
-export function summary(cart){return cart.items.map(x=>`${x.qty} × ${x.name}${x.variant==='Base'?'':' · '+x.variant}${cart.service==='chiperia'?': '+money(x.qty*x.unit_price):''}`).join('\n')+'\n'+(cart.service==='buffet'?'Buffet: importe pendiente; el encargado lo acordará con vos.':'Subtotal: '+money(cart.items.reduce((s,x)=>s+x.qty*x.unit_price,0)))+'\nModalidad: '+cart.fulfillment+'. Envío pendiente de revisión.';}
+export function summary(cart){
+ const modality={retiro:'Retiro en el local',delivery:'Delivery'}[cart.fulfillment]||'A coordinar';
+ return cart.items.map(x=>`${x.qty} × ${x.name}${x.variant==='Base'?'':' · '+x.variant}${cart.service==='chiperia'?': '+money(x.qty*x.unit_price):''}`).join('\n')+'\n'+(cart.service==='buffet'?'Buffet: importe pendiente; el encargado lo acordará con vos.':'Subtotal: '+money(cart.items.reduce((s,x)=>s+x.qty*x.unit_price,0)))+'\nModalidad: '+modality+'. Envío pendiente de revisión.';
+}
 export function demoCommand(text,cart,catalog,categories=[]){
  const t=normalize(text),choice=fulfillmentChoice(text);
  if(cart?.service==='buffet'){const pricing=referencePriceRequest(text,cart);if(pricing)return pricing;}
