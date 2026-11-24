@@ -57,7 +57,7 @@ Conectar un sitio nuevo a la rama de este repositorio. `netlify.toml` define bui
 |---|---|
 | PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_KEY | Build; URL y clave **sb_publishable_**. Únicos datos de conexión públicos. |
 | SUPABASE_URL, SUPABASE_SECRET_KEY | Functions; proyecto independiente y clave secreta de backend. |
-| WORKER_SECRET | Cadena aleatoria larga y exclusiva para despachar trabajo. |
+| WORKER_SECRET | Cadena aleatoria larga y exclusiva para despachar trabajo. Debe coincidir entre funciones en Production; el transporte usa HMAC en ASCII. |
 | BOT_ENABLED | `false` hasta autorización; además Configuración → Habilitar asistente debe estar activo. |
 | WHATSAPP_SEND_ENABLED | `false` hasta autorización; protege también mensajes humanos y notificaciones de pedidos. |
 | AI_IMAGE_ENABLED | `false` hasta autorizar envío de fotos al proveedor. |
@@ -110,3 +110,7 @@ Desde una base en 015, aplicar **016 si falta y después 017**, antes de un úni
 ## Buffet: consultas, pedidos y tarifas vigentes
 
 La actualización del [PR #1](https://github.com/Dezva/Chiperia-CRM/pull/1), en `fix/tarifas-buffet-sin-regresion-chiperia`, no añade SQL para una base en V1.7. Revisar [la guía de actualización](revisiones/buffet-flujo-tarifas.md) y realizar un único despliegue manual del commit aprobado, conservando conexiones y tarifas del CRM.
+
+## Autenticación del worker y contextos Netlify
+
+La [corrección de autenticación ASCII](revisiones/worker-auth-ascii.md) evita enviar `WORKER_SECRET` directamente como encabezado. No requiere SQL ni rotar un secreto existente por contener Unicode. Generar un deploy de Production del nuevo commit y comprobar `workerAuth: "hmac-sha256-v1"` en health; publicar un preview anterior no incorpora esta corrección.

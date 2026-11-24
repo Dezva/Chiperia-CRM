@@ -1,4 +1,6 @@
-> Resultado vigente: [retiro y delivery naturales](docs/revisiones/retiro-natural.md). Build correcto; 155 pruebas: 153 aprobadas, 0 fallidas y 2 omisiones heredadas. Comprobación final específica/navegador: 5/5 aprobadas.
+> Resultado vigente: [autenticación ASCII del worker](docs/revisiones/worker-auth-ascii.md). Build correcto; 161 pruebas: 159 aprobadas, 0 fallidas y 2 omisiones heredadas. Incluye webhook → dispatch → worker → PostgreSQL con secreto Unicode y WhatsApp simulado.
+
+> Resultado anterior: [retiro y delivery naturales](docs/revisiones/retiro-natural.md). Build correcto; 155 pruebas: 153 aprobadas, 0 fallidas y 2 omisiones heredadas. Comprobación final específica/navegador: 5/5 aprobadas.
 
 > Resultado anterior del PR #1: [buffet, tarifas y pedidos sin regresión de chipería](docs/revisiones/buffet-flujo-tarifas.md). Build correcto; 145 pruebas: 143 aprobadas, 0 fallidas y 2 omisiones heredadas. Además, 13/13 específicas aprobadas; proveedores simulados y PostgreSQL local.
 

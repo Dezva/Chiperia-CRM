@@ -1,7 +1,7 @@
 import {env} from '../lib/platform.mjs';
-// La recuperación programada despierta el mismo procesador; no ejecuta IA en el límite de cron.
+import {requestWorkerDispatch} from '../lib/worker-dispatch.mjs';
+// Solo despierta el procesador; nunca interpreta ni envía mensajes directamente.
 export default async ()=>{
- if(!env('URL')||!env('WORKER_SECRET'))return;
- await fetch(env('URL')+'/.netlify/functions/dispatch-background',{method:'POST',headers:{'x-worker-secret':env('WORKER_SECRET')},signal:AbortSignal.timeout(5000)});
+ await requestWorkerDispatch({origin:env('URL'),secret:env('WORKER_SECRET'),source:'schedule',timeoutMs:5000});
 };
 export const config={schedule:'* * * * *'};
