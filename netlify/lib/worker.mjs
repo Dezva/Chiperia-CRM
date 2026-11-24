@@ -1,3 +1,4 @@
+import {referencePriceRequest} from '../../shared/reference-prices.js';
 import {orderStatusRequested,registeredOrderCommand} from '../../shared/order-status.js';
 import {hydrateDeliveryLocation,deliveryQueryRequested,registeredDeliveryCommand} from '../../shared/delivery-context.js';
 import {deterministicConversation} from '../../shared/conversation-context.js';
@@ -51,7 +52,8 @@ export async function runWorker({budgetMs=45000}={}){
     let command;
     if(config.bot_enabled!==true){result={kind:'ignore',cart,reply:''};}
     else {
-    if(!cart.items?.length&&orderStatusRequested(text))command=registeredOrderCommand(text,lastOrders[0]);
+    if((cart.service==='buffet'||serviceChoice(text)==='buffet')&&referencePriceRequest(text,cart))command={intent:'reference_prices'};
+    else if(!cart.items?.length&&orderStatusRequested(text))command=registeredOrderCommand(text,lastOrders[0]);
     else if(!cart.items?.length&&deliveryQueryRequested(text))command=registeredDeliveryCommand(lastOrders[0],cart);
     else if(!cart.service&&!serviceChoice(text))command={intent:'help'};
     else if(serviceChoice(text))command={intent:'menu'};
