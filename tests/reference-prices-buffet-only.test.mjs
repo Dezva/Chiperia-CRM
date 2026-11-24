@@ -58,3 +58,57 @@ test('El cambio directo a buffet con consulta de precios no rompe la selección 
   assert.match(result.reply, /40\.000/);
   assert.deepEqual(result.cart.items, []);
 });
+
+test('Consulta de menú del buffet seguida de pedido conserva el flujo humano de precios', () => {
+  const buffet = answer('buffet', emptyCart('Prueba', 'chiperia'));
+  const menu = answer('menú', buffet.cart, { intent: 'menu' });
+  assert.match(menu.reply, /Tallarín/);
+  assert.match(menu.reply, /encargado/);
+  const prices = answer('¿Cuánto sale el tallarín?', menu.cart);
+  assert.match(prices.reply, /40\\.000/);
+  const selection = 'voy a querer el tallarin';
+  const command = deterministicConversation(selection, prices.cart, activeCatalog('buffet', catalog, menus));
+  assert.equal(command?.intent, 'update_cart');
+  const placed = answer(selection, prices.cart, command);
+  assert.match(placed.reply, /1 × Tallarín/);
+  assert.match(placed.reply, /Modalidad: A coordinar/);
+  assert.match(placed.reply, /¿Vas a retirar o querés delivery\\?/);
+  assert.equal(placed.cart.items[0].unit_price, null);
+  assert.equal(placed.cart.subtotal, null);
+  assert.equal(placed.cart.reference_price_context, undefined);
+  const delivery = answer('delivery', placed.cart, { intent: 'summary', fulfillment: 'delivery' });
+  assert.match(delivery.reply, /Enviá tu ubicación puntual de WhatsApp/);
+  const premature = answer('CONFIRMAR PEDIDO', delivery.cart);
+  assert.equal(premature.kind, 'reply');
+  assert.match(premature.reply, /ubicación puntual/);
+  const pickup = answer('retiro', placed.cart, { intent: 'summary', fulfillment: 'retiro' });
+  assert.match(pickup.reply, /Modalidad: Retiro en el local/);
+  assert.equal(pickup.cart.items[0].unit_price, null);
+});
+
+test('Dos tallarines después de consultar tarifas se procesa como pedido y no como otra tarifa', () => {
+  const buffet = answer('buffet', emptyCart('Prueba', 'chiperia'));
+  const rates = answer('¿Cuáles son los precios por kilo?', buffet.cart);
+  const text = '2 tallarines';
+  const command = deterministicConversation(text, rates.cart, activeCatalog('buffet', catalog, menus));
+  assert.equal(command?.intent, 'update_cart');
+  const placed = answer(text, rates.cart, command);
+  assert.deepEqual(placed.cart.items.map(item => [item.name, item.qty]), [['Tallarín', 2]]);
+  assert.equal(placed.cart.reference_price_context, undefined);
+  assert.equal(placed.cart.subtotal, null);
+});
+
+test('Chipería no pierde su subtotal después de consultas y pedidos del buffet', () => {
+  const chiperia = answer('2 chipas tradicionales', emptyCart('Prueba', 'chiperia'),
+    { intent: 'update_cart', items: [{ variant_id: 'tradicional-base', qty: 2, notes: '' }] });
+  assert.equal(chiperia.cart.subtotal, 7000);
+  const buffet = answer('buffet', chiperia.cart);
+  const rate = answer('¿Cuáles son los precios por kilo?', buffet.cart);
+  const order = answer('voy a querer el tallarin', rate.cart,
+    deterministicConversation('voy a querer el tallarin', rate.cart, activeCatalog('buffet', catalog, menus)));
+  assert.equal(order.cart.subtotal, null);
+  const back = answer('chipería', order.cart);
+  assert.equal(back.cart.subtotal, 7000);
+  assert.equal(back.cart.items.length, 1);
+  assert.doesNotMatch(back.reply, /por kilo/);
+});
