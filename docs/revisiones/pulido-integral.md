@@ -1,5 +1,7 @@
 # Pulido integral de la conversación — 24/11/2026
 
+**Autorización posterior:** el responsable habilitó el despliegue automático de esta entrega. La pausa y los pasos manuales de esta página describen la preparación de `4ba610c`; consultar la [política de publicación vigente](../instalacion.md#publicación-automática-autorizada).
+
 Rama: `fix/tarifas-buffet-sin-regresion-chiperia`. Base de esta revisión: `e9548065e96b3615aa386ce43f6235716f1430e7`.
 
 PR existente: https://github.com/Dezva/Chiperia-CRM/pull/1. Su vista pública confirma la rama de trabajo y la base `fix/el-viejo-login-v1.5` en `1b15cfbb341e945a97ec8c8235551c8fd3a7fbe3`. No se modifica esa rama, `main`, Guarnipitan ni producción. Los commits de preparación mantienen `[skip netlify]`.

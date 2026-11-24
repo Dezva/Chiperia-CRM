@@ -12,7 +12,7 @@ V1.3/V1.4 añade catálogo comercial por producto, categorías editables, sinón
 
 V1.5 presenta un inicio de sesión independiente con la identidad de El Viejo. [Cambios, capturas, pruebas y actualización del sitio Netlify](docs/revisiones/v1.5-login.md). No requiere migraciones.
 
-Preparación del despliegue final: estos cambios usan `[skip netlify]` y no activan publicaciones automáticas. [Política actual de publicación manual](docs/instalacion.md#preparación-del-despliegue-final--publicación-manual).
+Despliegue automático autorizado: el nuevo commit incluye el pulido completo del chatbot y permite el build de Netlify sin marca de omisión. [Política actual de publicación](docs/instalacion.md#publicación-automática-autorizada).
 
 Pulido integral: consultas y mensajes sociales conservan el borrador; las compras inválidas se reinician y los errores técnicos se recuperan sin perder el pedido. [Comportamiento, validación y despliegue final](docs/revisiones/pulido-integral.md).
 

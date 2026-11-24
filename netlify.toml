@@ -1,7 +1,8 @@
 [build]
   command = "npm run build"
   publish = "dist"
-  # Preparación del despliegue final: commits con [skip netlify], sin forzar builds.
+  # Despliegue automático autorizado: exit 1 indica a Netlify continuar el build.
+  ignore = "exit 1"
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"

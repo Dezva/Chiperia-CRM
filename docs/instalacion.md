@@ -115,14 +115,14 @@ La actualización del [PR #1](https://github.com/Dezva/Chiperia-CRM/pull/1), en 
 
 La [corrección de autenticación ASCII](revisiones/worker-auth-ascii.md) evita enviar `WORKER_SECRET` directamente como encabezado. No requiere SQL ni rotar un secreto existente por contener Unicode. Generar un deploy de Production del nuevo commit y comprobar `workerAuth: "hmac-sha256-v1"` en health; publicar un preview anterior no incorpora esta corrección.
 
-## Preparación del despliegue final — publicación manual
+## Publicación automática autorizada
 
-La última preparación del chatbot se describe en [pulido integral: validación y un único despliegue manual](revisiones/pulido-integral.md). No necesita SQL nuevo ni cambios de variables de entorno.
+El responsable autoriza ahora disparar el despliegue automático de los últimos cambios de `fix/tarifas-buffet-sin-regresion-chiperia` y confirma que auto publish ya está activo en Netlify. Esta autorización sustituye la pausa de publicación de la etapa de preparación.
 
-Por instrucción posterior del responsable, los cambios de preparación del chatbot en `fix/tarifas-buffet-sin-regresion-chiperia` llevan `[skip netlify]`. La autorización anterior de publicar automáticamente queda sustituida para este trabajo. No generar un deploy ni activar auto publishing mientras se prepara la versión final.
+El commit de activación se sube sin `[skip netlify]` y contiene como antecedente el pulido completo `4ba610c64991c0612f58de64b9076b9be0d7fc45`. Sus 186 pruebas terminaron con 184 aprobadas y dos omisiones heredadas; ambas validaciones de GitHub Actions aprobaron ese commit. No requiere SQL nuevo ni cambios de variables de entorno.
 
-Se retira de `netlify.toml` la regla `build.ignore = "exit 1"` que forzaba los builds. La marca `[skip netlify]` omite el build de este commit por la integración Git; GitHub Actions puede seguir validando el código. El workflow del repositorio únicamente ejecuta build y pruebas y no publica en Netlify.
+`netlify.toml` establece `build.ignore = "exit 1"` para que Netlify continúe el build al recibir el push. No omite validaciones ni altera credenciales. La rama de producción del sitio conectado a **Dezva/Chiperia-CRM** debe ser exactamente `fix/tarifas-buffet-sin-regresion-chiperia`.
 
-No se cambian los ajustes externos del sitio desde el repositorio. Si auto publishing estaba habilitado para otros commits, su estado se controla en Netlify; no confundir la omisión de estos commits con haber desactivado globalmente esa configuración. La publicación de la versión final requiere autorización y un despliegue manual separado.
+El push permite que la integración Git construya el sitio y sus funciones y que auto publish publique el resultado según la configuración existente del sitio. No se modifican esos ajustes externos desde el repositorio. El workflow de GitHub sigue ejecutando únicamente build y pruebas.
 
 Comprobar en el resultado Where: Production y el commit más reciente. Las variables siguen siendo las del contexto Production; no se modifican secretos ni credenciales desde el repositorio. Para verificar la corrección del worker, health debe mostrar `workerAuth: "hmac-sha256-v1"` y dispatch debe registrar `worker_started` tras un mensaje nuevo.
