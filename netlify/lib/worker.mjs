@@ -1,3 +1,4 @@
+import {mediaDisposition} from './whatsapp-media.mjs';
 import {referencePriceRequest} from '../../shared/reference-prices.js';
 import {orderStatusRequested,registeredOrderCommand} from '../../shared/order-status.js';
 import {hydrateDeliveryLocation,deliveryQueryRequested,registeredDeliveryCommand} from '../../shared/delivery-context.js';
@@ -33,6 +34,12 @@ export async function runWorker({budgetMs=45000}={}){
   if(job.kind==='send'){await send(job,token);count++;continue;}
   const c=job.conversation;
   try{
+   const media=mediaDisposition(job.message);
+   if(media==='ignore'){
+    await rpc('guarni_finish',{p_token:token,p_job:job.job.id,p_revision:c.revision,p_cart:c.cart,p_body:'',p_kind:'ignore'});
+    count++;
+    continue;
+   }
    const settings=await db('/rest/v1/guarni_settings?id=eq.true');
    const config={...defaults,...settings[0]?.config,reference_prices:settings[0]?.config?.reference_prices||{}};
    const botEnabled=env('BOT_ENABLED')==='true'&&config.bot_enabled===true;
@@ -44,7 +51,7 @@ export async function runWorker({budgetMs=45000}={}){
    let result;
    if(c.mode==='human'||!botEnabled)result={kind:'ignore',cart:c.cart,reply:''};
    else if(/^\[Contenido (location|live_location) recibido:/.test(job.message.body))result={kind:'reply',cart:c.cart,reply:'Para adjuntar la ubicación a tu pedido, enviame tu ubicación actual puntual desde WhatsApp 📍.'};
-   else if(job.message.body.startsWith('[Contenido '))result={kind:'human',cart:c.cart,reply:'Recibí un archivo. El equipo continuará la atención por este chat.'};
+   else if(media==='ask_text')result={kind:'reply',cart:c.cart,reply:'Recibí un archivo. Para ayudarte, escribime en texto qué necesitás. Si preferís hablar con una persona, decímelo.'};
    else {
     const [rawCatalog,client,menus,categories,points,lastOrders]=await Promise.all([db('/rest/v1/guarni_catalog?select=id,name,variant,category,category_id,price,available,active,seasonal,aliases,legacy_generic,service'),db('/rest/v1/crm_clients?id=eq.'+c.client_id+'&select=name'),db('/rest/v1/viejo_menus?status=eq.published&day=eq.'+localDate()+'&select=id,day,status,items'),db('/rest/v1/viejo_catalog_categories?order=position,name'),c.draft_location_id?db('/rest/v1/guarni_locations?id=eq.'+c.draft_location_id+'&conversation_id=eq.'+c.id+'&select=id,address'):Promise.resolve([]),!c.cart?.items?.length&&(orderStatusRequested(job.message.body)||deliveryQueryRequested(job.message.body))?db('/rest/v1/guarni_orders?conversation_id=eq.'+c.id+'&order=created_at.desc&limit=1&select=id,number,status,service,fulfillment,delivery_location_id'):Promise.resolve([])]);
     const catalog=withCategories(rawCatalog,categories);

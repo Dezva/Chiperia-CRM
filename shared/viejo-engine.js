@@ -74,18 +74,18 @@ export function reduceOrder({text,cart:old,catalog,menus=[],command={},profileNa
  for(const saved of Object.values(cart.saved_carts||{}))if(saved&&typeof saved==='object')saved.delivery_location_id=null;
  if(selected==='mixed')return {cart,kind:'reply',reply:'Prepararemos solicitudes separadas y relacionadas para buffet y chipería. Empezá eligiendo un servicio; el equipo revisará un único delivery si corresponde.'};
  if(selected&&selected!==cart.service){const initialPoint=cart.service?null:cart.delivery_location_id;const saved=cart.saved_carts||{};if(cart.service)saved[cart.service]={...cart,delivery_location_id:null,saved_carts:{}};cart={...emptyCart(profileName,selected),...saved[selected],service:selected,saved_carts:saved,delivery_location_id:initialPoint};delete cart.reference_price_context;command=(selected==='buffet'&&referencePriceRequest(text,cart,activeCatalog('buffet',catalog,menus,now)))||{intent:'menu'};}
- if(!cart.service)return {cart,kind:'reply',reply:command.intent==='clarify'?command.message:greeting};
- const list=activeCatalog(cart.service,catalog,menus,now);
+ const list=cart.service?activeCatalog(cart.service,catalog,menus,now):[];
  if(cart.service==='buffet'&&(command.intent==='reference_prices'||referencePriceRequest(text,cart,list))){
   cart.reference_price_context=true;
   return {cart,kind:'reply',reply:referencePriceReply(text,list,settings)};
  }
+ if(/\b(humano|persona|encargado|empleado)\b/.test(normalize(text))||command.intent==='human')return {cart,kind:'human',reply:'El equipo continuará la atención. El asistente queda pausado.'};
+ if(!cart.service)return {cart,kind:'reply',reply:command.intent==='clarify'?command.message:greeting};
  delete cart.reference_price_context;
  if(command.context)cart.conversation=structuredClone(command.context);
  if(['retiro','delivery'].includes(command.fulfillment)){cart.fulfillment=command.fulfillment;if(command.fulfillment==='retiro')cart.delivery_location_id=null;}
  if(command.intent==='clarify')return {cart,kind:'reply',reply:command.message};
  if(command.intent==='draft_status'){let changed=false;try{const fresh=quote(cart.items,cart.service,list);changed=!sameItems(fresh.items,cart.items);cart={...cart,...fresh,quoted:changed?false:cart.quoted};}catch{return {cart:{...cart,quoted:false},kind:'reply',reply:'Tengo tu pedido en borrador, pero cambió la disponibilidad. El equipo debe ayudarte a revisar los productos.'};}const next=cart.fulfillment==='a_coordinar'?'¿Vas a retirar o querés delivery?':cart.fulfillment==='delivery'&&!cart.delivery_location_id?'Falta tu ubicación puntual de WhatsApp.':'Escribí CONFIRMAR PEDIDO para enviar la solicitud al local.';return {cart,kind:'reply',reply:'Tengo este pedido en borrador; todavía no está enviado al local:\n'+summary(cart)+'\n'+(changed?'Los precios se actualizaron. Revisá el resumen.\n':'')+next};}
- if(/\b(humano|persona|encargado|empleado)\b/.test(normalize(text))||command.intent==='human')return {cart,kind:'human',reply:'El equipo continuará la atención. El asistente queda pausado.'};
  if(['/cancelar','/reiniciar','cancelar pedido'].includes(normalize(text)))return {cart:emptyCart(profileName,cart.service),kind:'reply',reply:'Borrador cancelado. Conservamos el historial.'};
  if(!list.length&&cart.service==='buffet')return {cart,kind:'reply',reply:'Todavía no hay menú del buffet confirmado para hoy. Podés pedir atención del encargado.'};
  if(command.intent==='update_cart'){try{cart={...cart,...quote(command.items,cart.service,list),quoted:false};}catch{return {cart:{...cart,quoted:false},kind:'reply',reply:'Cambió la disponibilidad del carrito. El equipo puede ayudarte a revisar los productos.'};}}
