@@ -1,12 +1,13 @@
 import {referencePriceRequest,referencePriceReply} from './reference-prices.js';
 import {deterministicConversation} from './conversation-context.js';
-import {sellable} from './catalog.js';
+import {commercialText,sellable} from './catalog.js';
 import {deliveryMode,WEEK_DAYS} from './settings.js';
 import {CATEGORY_IDS} from './buffet-categories.js';
 import {normalize,fulfillmentChoice,isConfirmation} from './order-engine.js';
 export {normalize,isConfirmation,fulfillmentChoice};
 export const money=n=>n==null?'Pendiente':new Intl.NumberFormat('es-PY').format(n)+' Gs.';
-export const greeting='¡Buenas! Bienvenido a El Viejo. ¿Querés consultar o hacer un pedido del buffet o de la chipería?';
+const servicePrompt='Elegí un servicio para continuar: respondé Buffet o Chipería.';
+export const greeting='¡Buenas! Bienvenido a El Viejo. '+servicePrompt;
 export const defaults={business_name:'El Viejo',branch:'Ruta Villeta–Alberdi',logo_url:'assets/abuelito-provisional.png',timezone:'America/Asuncion',bot_enabled:false,payment_methods:['Efectivo','Tarjeta de débito','Tarjeta de crédito','QR','Transferencia'],fulfillment_modes:['retiro','delivery'],schedules:{buffet:{days:[1,2,3,4,5,6],open:'11:00',close:'15:00',delivery_mode:'scheduled',delivery_open:'12:00',delivery_close:'14:00'},chiperia:{days:[1,2,3,4,5,6],open:'05:15',close:'18:30',delivery_mode:'pending',delivery_open:null,delivery_close:null}},reference_prices:{guarniciones:40000,carne:80000,pollo_chancho:75000}};
 export function localDate(now=new Date()){return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Asuncion',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);}
 export function serviceChoice(text){const t=normalize(text);const b=/\bbuffet\b/.test(t),c=/\bchiperia\b/.test(t);return b&&c?'mixed':b?'buffet':c?'chiperia':null;}
@@ -80,7 +81,11 @@ export function reduceOrder({text,cart:old,catalog,menus=[],command={},profileNa
   return {cart,kind:'reply',reply:referencePriceReply(text,list,settings)};
  }
  if(/\b(humano|persona|encargado|empleado)\b/.test(normalize(text))||command.intent==='human')return {cart,kind:'human',reply:'El equipo continuará la atención. El asistente queda pausado.'};
- if(!cart.service)return {cart,kind:'reply',reply:command.intent==='clarify'?command.message:greeting};
+ if(!cart.service){
+  if(command.intent==='clarify')return {cart,kind:'reply',reply:command.message};
+  const affirmative=/^si(?: por favor)?$/.test(commercialText(text));
+  return {cart,kind:'reply',reply:affirmative?servicePrompt:greeting};
+ }
  delete cart.reference_price_context;
  if(command.context)cart.conversation=structuredClone(command.context);
  if(['retiro','delivery'].includes(command.fulfillment)){cart.fulfillment=command.fulfillment;if(command.fulfillment==='retiro')cart.delivery_location_id=null;}
