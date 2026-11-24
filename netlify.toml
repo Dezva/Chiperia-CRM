@@ -1,8 +1,7 @@
 [build]
   command = "npm run build"
   publish = "dist"
-  # Construir cada push autorizado de la rama conectada; exit 1 significa continuar.
-  ignore = "exit 1"
+  # Preparación del despliegue final: commits con [skip netlify], sin forzar builds.
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"

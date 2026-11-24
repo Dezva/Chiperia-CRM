@@ -21,7 +21,8 @@ test('Buffet: consulta → seguimiento con delivery → pedido, incrementos y co
 
 test('Buffet: cantidades y observaciones por plato, preservación y aclaración segura de desconocidos',()=>{
  const c=conversation();const r=c.say('Quiero dos tallarines sin cebolla y una milanesa de pollo con poca sal');assert.deepEqual(r.cart.items.map(x=>[x.variant_id,x.qty,x.notes]),[['tallarin',2,'sin cebolla'],['milanesa',1,'con poca sal']]);assert.match(r.reply,/Observación: sin cebolla/);assert.match(r.reply,/Observación: con poca sal/);const before=structuredClone(c.cart.items);c.say('¿Cuáles son las tarifas del buffet?');assert.deepEqual(c.cart.items,before);c.say('Quiero tres tallarines');assert.equal(c.cart.items.find(x=>x.variant_id==='tallarin').notes,'sin cebolla');
- const saved=structuredClone(c.cart.items);for(const text of ['dos tallarines sin cebolla y sushi','tallarin sin milanesa de pollo','dos tallarines sin']){const result=c.say(text);assert.equal(result.kind,'reply');assert.deepEqual(result.cart.items,saved,text);}
+ const failed=c.say('dos tallarines sin cebolla y sushi');assert.deepEqual(failed.cart.items,[]);assert.equal(failed.cart.conversation.retry_order,true);assert.match(failed.reply,/pedido completo/);c.say('dos tallarines');
+ const saved=structuredClone(c.cart.items);for(const text of ['tallarin sin milanesa de pollo','dos tallarines sin']){const result=c.say(text);assert.equal(result.kind,'reply');assert.deepEqual(result.cart.items,saved,text);}
  const numbered=conversation({menus:[{...menu(),items:[{id:'q',name:'Tarta 4 quesos',category_id:'guarniciones',available:true}]}]});numbered.say('¿Cuáles son las tarifas del buffet?');assert.match(numbered.say('Del tarta 4 quesos').reply,/39\.123/);assert.deepEqual(numbered.cart.items,[]);
  const one=conversation();one.say('Quiero dos tallarines bien calientes');assert.equal(one.cart.items[0].notes,'bien calientes');assert.equal(one.say('Al final quiero tres').cart.items[0].qty,3);
 });

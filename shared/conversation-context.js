@@ -3,9 +3,12 @@ import {BUFFET_CATEGORIES} from './buffet-categories.js';
 import {referencePriceRequest} from './reference-prices.js';
 import {orderStatusRequested} from './order-status.js';
 import {deliveryStatusCommand,deliveryReferenceCommand} from './delivery-context.js';
+import {retryOrderCommand} from './order-retry.js';
+import {isConfirmation} from './order-engine.js';
 import {commercialText,productTerms,productName,sellable} from './catalog.js';
 import {matchCommercial,deterministicOrder,buffetOrder,quantityWords,orderOperation,inlineFulfillment,orderText,requestedItems,clarifyOptions} from './catalog-matching.js';
 const grammatical=new Set('producto productos porfa porfavor podes podria podrias traer traeme pasame preparame enviame mandame favor quiero quisiera necesito gustaria me el la lo los las un una uno y e para a mi agregar agrega agregame dame llevo llevar pedir pedido con sin bien caliente calientes frio fria queso sal azucar por favor gracias voy querer te dije al final total cambia cambiar solo solamente unicamente no'.split(' '));
+const queryWords=new Set('que cual cuales tienen tiene hay venden vende disponible disponibles esta estan hoy buffet opcion opciones'.split(' '));
 export function categoryRequest(text,catalog,categories=[]){
  const t=commercialText(text),groups=categories.length?categories:[...new Map(catalog.filter(p=>p.category).map(p=>[p.category_id||p.category,{id:p.category_id||p.category,name:p.category,active:p.category_active!==false}])).values()];
  const hits=groups.filter(c=>c.active!==false&&commercialText(c.name)&&(' '+t+' ').includes(' '+commercialText(c.name)+' ')).sort((a,b)=>commercialText(b.name).length-commercialText(a.name).length);
@@ -49,16 +52,22 @@ export function fulfillmentCommand(text,cart,catalog){
  return {intent:'clarify',message:'¿Preferís retirar en el local o pedir delivery? Conservamos tus productos y cantidades.'};
 }
 export function deterministicConversation(text,cart,catalog,{categories=[]}={}){
+ if(isConfirmation(text))return {intent:'summary'};
  const mode=fulfillmentCommand(text,cart,catalog);if(mode)return mode;
  if(cart?.service==='buffet'){const pricing=referencePriceRequest(text,cart,catalog);if(pricing)return pricing;}
  if(orderStatusRequested(text)&&cart?.items?.length)return {intent:'draft_status'};
  const status=deliveryStatusCommand(text,cart);if(status)return status;
  const t=commercialText(text);
+ if(/^(?:hola|buenas|buen dia|buenos dias|buenas tardes|buenas noches|gracias|muchas gracias|ok|dale)$/.test(t))return {intent:'help'};
  if(/^(horario|horarios|forma pago|forma pago disponible|metodo pago|metodo pago disponible)$/.test(t))return {intent:'info'};
+ if(cart?.service==='buffet'&&!catalog.length)return {intent:'menu'};
  const found=matchCommercial(text,catalog,{context:cart?.conversation}),category=categoryRequest(text,catalog,cart?.service==='buffet'?BUFFET_CATEGORIES:categories),isQuery=/\b(?:que|cual|clase|tipo|vendes|vende|venden|tienen|tiene|hay|mostra|mostrame|solo|unicamente|cuanto|menu|catalogo|carta)\b/.test(t)||category?.category_names?.some(name=>commercialText(name)===t);
  if(cart?.service==='buffet'){
   if(/\b(?:menu|carta)\b/.test(t)||/\b(?:que|cual)\b/.test(t)&&/\b(?:plato|hay|tienen|opcion|sirven|venden)\b/.test(t))return {intent:'menu',...(category||{})};
-  if(/\b(?:tienen|tiene|hay|disponible|venden)\b/.test(t)&&found.matches.length)return {intent:'clarify',message:found.matches.map(m=>productName(m.product)+(m.product.available?' está disponible en el menú de hoy.':' no está disponible en el menú de hoy.')).join('\n')+' No cambié tu pedido.'};
+  if(/\b(?:tienen|tiene|hay|disponible|venden)\b/.test(t)&&found.matches.length){
+   if(found.unknown.some(word=>!grammatical.has(word)&&!queryWords.has(word)))return {intent:'clarify',message:'No identifiqué ese plato completo en el menú del buffet de hoy. Escribí MENÚ para consultar las opciones. No cambié tu pedido.'};
+   return {intent:'clarify',message:found.matches.map(m=>productName(m.product)+(m.product.available?' está disponible en el menú de hoy.':' no está disponible en el menú de hoy.')).join('\n')+' No cambié tu pedido.'};
+  }
  }
  // Un nombre/variante específicos gana a una categoría; una consulta de categoría no arma carritos.
  if(category&&isQuery&&!found.matches.some(m=>m.product.variant&&m.product.variant!=='Base')&&!found.matches.some(m=>m.product.name!==m.product.category&&!m.product.legacy_generic))return {intent:'menu',...category};
@@ -74,19 +83,27 @@ export function deterministicConversation(text,cart,catalog,{categories=[]}={}){
  }
  if(noted)return noted;
  if(resolved.command)return resolved.command;
+ if(cart?.service==='buffet'&&found.unknown.some(t=>!grammatical.has(t))&&(found.matches.length||found.ambiguous.length||/[\r\n;]/.test(text)||/\b(?:quiero|quisiera|dame|llevo|pedir|pedido|\d+)\b/.test(t))){
+  const semantic=matchCommercial(text,catalog,{context:cart?.conversation,semantic:true});
+  if(semantic.matches.length&&!semantic.ambiguous.length&&!semantic.matches.some(m=>m.unsafeSemantic)&&semantic.unknown.every(word=>grammatical.has(word)))return null;
+  return retryOrderCommand('No pude identificar todos los platos del pedido en el menú del buffet de hoy.');
+ }
  if(/\b(?:repetir|lee|mensaje)\b/.test(t)&&!found.matches.length)return {intent:'clarify',message:cart?.conversation?.pending?'Decime la variedad que preferís; conservamos la cantidad que pediste.':'Decime qué producto o categoría querés revisar y te muestro solo esas opciones.'};
  return found.matches.length||found.ambiguous.length?null:deliveryReferenceCommand(text,cart);
 }
-export function validateInterpretation(command,text,cart,catalog,candidates){
+export function validateInterpretation(command,text,cart,catalog,candidates,{semantic=false}={}){
  const mode=fulfillmentCommand(text,cart,catalog);if(mode)return mode;
  if(cart?.service==='buffet'&&referencePriceRequest(text,cart,catalog))return {intent:'reference_prices'};
  if(!command||typeof command!=='object'||!['update_cart','menu','info','summary','human','help'].includes(command.intent))throw Error('invalid_interpretation');
+ const requestText=commercialText(text),explicitQuery=/\b(?:menu|catalogo|carta|horario|pago|pagar|precio|cuanto|tienen|hay|disponible|estado)\b/.test(requestText)||/[?¿]/.test(String(text));
+ const orderAttempt=!explicitQuery&&requestText.split(' ').some(word=>quantityWords[word]||/^\d+$/.test(word)||['quiero','quisiera','pedir','dame','agrega','agregame'].includes(word));
+ if(orderAttempt&&!['update_cart','help','human'].includes(command.intent))throw Error('commercial_equivalence_unconfirmed');
  if(command.intent==='menu'){const request=categoryRequest(text,catalog);if(request)Object.assign(command,request);else if(command.category){const group=categoryRequest(command.category,catalog);if(!group)throw Error('commercial_equivalence_unconfirmed');Object.assign(command,group);}return command;}
  if(command.intent!=='update_cart')return command;
  if(/^\s*no\s+(?:quiero|agreg|sum)/i.test(String(text)))throw Error('commercial_equivalence_unconfirmed');
- const found=matchCommercial(text,catalog,{context:cart?.conversation});
+ const found=matchCommercial(text,catalog,{context:cart?.conversation,semantic});
  if(found.ambiguous.length||!found.matches.length||found.unknown.some(t=>!grammatical.has(t)))throw Error('commercial_equivalence_unconfirmed');
- if(found.matches.some(m=>m.product.service==='buffet'?!m.product.available:!sellable(m.product)))throw Error('commercial_equivalence_unconfirmed');
+ if(found.matches.some(m=>m.unsafeSemantic||m.qty<1||m.qty>30||(m.product.service==='buffet'?!m.product.available:!sellable(m.product))))throw Error('commercial_equivalence_unconfirmed');
  if(!Array.isArray(command.items)||!command.items.length||command.items.length>30)throw Error('invalid_interpretation');
  if(cart?.conversation?.pending?.resolved_items?.length&&found.matches.every(m=>m.variantOnly))found.matches=[...cart.conversation.pending.resolved_items.map(m=>({product:catalog.find(p=>p.id===m.id),qty:m.qty,explicitQty:true,variantOnly:true})).filter(m=>m.product),...found.matches];
  const expected=new Map(requestedItems(found,cart,text).map(x=>[x.variant_id,x.qty]));

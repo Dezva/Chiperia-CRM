@@ -62,7 +62,7 @@ test('Chipería: una variante ausente o desconocida no se sustituye por una del 
   const unspecified = deterministicOrder('2 sandwichs', { items: [] }, catalog);
   assert.equal(unspecified.command.intent, 'clarify');
   assert.ok(unspecified.command.context.pending.candidate_ids.length > 1);
-  assert.equal(deterministicOrder('2 sandwichs de milanesa de pescado', { items: [] }, catalog).command.intent, 'clarify');
+  assert.equal(deterministicOrder('2 sandwichs de milanesa de pescado', { items: [] }, catalog).command, null);
 });
 
 test('WhatsApp pide elegir servicio tras Sí y Sí por favor, incluso al repetirlos', async t => {

@@ -1,5 +1,7 @@
 # Pedidos de chipería con errores de escritura y varias líneas
 
+**Actualización posterior:** [pedido completo e interpretación sin equivalencias fijas](pedido-completo.md) reemplaza la tabla especial de abreviaciones y el comportamiento de conservar el borrador ante un producto desconocido. Esta página y su salida de pruebas documentan el estado de `1f13cf4`.
+
 Corrección sobre `fix/tarifas-buffet-sin-regresion-chiperia`, desde `9afd5bc1759e27fd7096c9a7504dde8bc61a63da`.
 
 ## Mensaje reproducido

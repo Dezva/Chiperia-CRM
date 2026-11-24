@@ -12,9 +12,11 @@ V1.3/V1.4 añade catálogo comercial por producto, categorías editables, sinón
 
 V1.5 presenta un inicio de sesión independiente con la identidad de El Viejo. [Cambios, capturas, pruebas y actualización del sitio Netlify](docs/revisiones/v1.5-login.md). No requiere migraciones.
 
-Publicación automática autorizada: los nuevos pushes de esta rama permiten el build de Netlify, sin marca de omisión. [Configuración del build y auto publishing del sitio](docs/instalacion.md#publicación-automática-autorizada--24112026).
+Preparación del despliegue final: estos cambios usan `[skip netlify]` y no activan publicaciones automáticas. [Política actual de publicación manual](docs/instalacion.md#preparación-del-despliegue-final--publicación-manual).
 
 Pedidos con errores de escritura: reconoce «sandwidch» y «sanwi», cantidades por línea y productos repetidos sin perder unidades. [Reglas, pruebas y actualización](docs/revisiones/pedidos-con-errores.md).
+
+Pedido completo: si un artículo no se identifica o no está disponible, reinicia el borrador y pide repetir toda la lista. Interpreta expresiones naturales con el catálogo vigente y validación del servidor, sin una tabla fija de abreviaciones. [Flujo actualizado y pruebas](docs/revisiones/pedido-completo.md).
 
 Autenticación del worker en ASCII: corrige el descarte de `x-worker-secret` con valores Unicode y añade logs de despacho. [Diagnóstico y despliegue en Production](docs/revisiones/worker-auth-ascii.md).
 
