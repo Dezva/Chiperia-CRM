@@ -30,20 +30,22 @@ test('Interpretación del proveedor: sanwich, sangui y sanwi contra catálogo ac
  assert.equal(command.intent,'update_cart');assert.equal(reduceOrder({text:'dos baguet de pavo',cart,catalog:[...catalog,product],command}).cart.subtotal,14246,'Un producto nuevo no necesita cambios en el código');
 });
 
-test('Interpretación insegura: ambigüedad, producto desconocido, precio pendiente, cantidades inventadas o lote incompleto exigen repetir todo',async t=>{
+test('Interpretación insegura: errores comerciales piden repetir; cantidades inventadas o lote truncado son fallos del proveedor',async t=>{
  t.after(mockEnvironment());let response;
  t.mock.method(globalThis,'fetch',async url=>url.includes('viejo_ai_usage')?Response.json(null):Response.json({status:'completed',output_text:JSON.stringify(response)}));
  const requests=[
   ['un bollo',[item('bollito-base')],catalog],
   ['una pizza de pollo',[item('sandwich-milanesa-de-pollo')],catalog],
   ['un sangui de pescado',[item('sandwich-milanesa-de-pollo')],catalog],
-  ['un sangui de pollo',[item('sandwich-milanesa-de-pollo',4)],catalog],
-  [screenshot,expected.slice(0,2),catalog],
+  ['un sangui de pollo',[item('sandwich-milanesa-de-pollo',4)],catalog,true],
+  [screenshot,expected.slice(0,2),catalog,true],
   ['un sangui de pollo',[item('sandwich-milanesa-de-pollo')],catalog.map(p=>p.id==='sandwich-milanesa-de-pollo'?{...p,price:null,available:false}:p)],
-  ['un sangui de pollo',[item('sandwich-milanesa-de-pollo')],[...catalog,{id:'otro-pollo',name:'Sándwich',variant:'Pollo',price:9000,available:true,active:true,service:'chiperia'}]],
+  ['un sangui de pollo',[item('sandwich-milanesa-de-pollo')],[...catalog,{id:'otro-pollo',name:'Sándwich',variant:'Pollo',price:9000,available:true,active:true,service:'chiperia'}],true],
  ];
- for(const [text,items,list] of requests){
-  response=output(items);const command=await interpret(text,cart,list,defaults);assert.equal(command.intent,'retry_order',text);assert.match(command.message,/pedido completo/);assert.doesNotMatch(command.message,/ajustar/);
+ for(const [text,items,list,providerFailure] of requests){
+  response=output(items);
+  if(providerFailure){await assert.rejects(()=>interpret(text,cart,list,defaults),/invalid_ai_interpretation/,text);continue;}
+  const command=await interpret(text,cart,list,defaults);assert.equal(command.intent,'retry_order',text);assert.match(command.message,/pedido completo/);assert.doesNotMatch(command.message,/ajustar/);
  }
  for(const intent of ['info','menu','summary']){response={...output([]),intent};assert.equal((await interpret('un sangui desconocido',cart,catalog,defaults)).intent,'retry_order','No mostrar horarios ni un resumen viejo ante un pedido no comprendido');}
  const normal=output([item('sandwich-milanesa-de-pollo')]);

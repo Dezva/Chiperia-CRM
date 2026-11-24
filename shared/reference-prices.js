@@ -27,6 +27,7 @@ function subjectOf(text) {
 
 export function referencePriceRequest(text, cart, menu = []) {
   const value = categoryKey(text).replace(/[^a-z0-9\s]/g, ' ').trim().replace(/\s+/g, ' ');
+  if (orderStatusRequested(text)) return null;
   if (/\b(?:hablar con|pasame con|que me atienda) (?:un[ae]? |el |la )?(?:humano|persona|encargado|empleado)\b/.test(value)) return null;
   if (priceTerms.test(value) || /^(?:y )?(?:cuanto|por (?:kilos?|kg|kilogramos?))\b/.test(value) &&
       !/\b(?:tarda|demora|dura|tiempo)\b/.test(value)) return { intent: 'reference_prices' };

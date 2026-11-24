@@ -1,5 +1,7 @@
 # Repetir el pedido completo e interpretar nombres sin equivalencias fijas
 
+**Actualización posterior:** [pulido integral de conversación](pulido-integral.md) restringe el reinicio a intentos reales de compra y diferencia los errores técnicos, las consultas y los mensajes sociales. Esta página documenta el estado de `e954806`.
+
 Continuación de `1f13cf4` en `fix/tarifas-buffet-sin-regresion-chiperia`. Esta revisión reemplaza la política anterior de conservar el borrador tras un artículo desconocido o no vendible.
 
 ## Comportamiento

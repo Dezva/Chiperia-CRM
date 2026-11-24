@@ -14,6 +14,8 @@ V1.5 presenta un inicio de sesión independiente con la identidad de El Viejo. [
 
 Preparación del despliegue final: estos cambios usan `[skip netlify]` y no activan publicaciones automáticas. [Política actual de publicación manual](docs/instalacion.md#preparación-del-despliegue-final--publicación-manual).
 
+Pulido integral: consultas y mensajes sociales conservan el borrador; las compras inválidas se reinician y los errores técnicos se recuperan sin perder el pedido. [Comportamiento, validación y despliegue final](docs/revisiones/pulido-integral.md).
+
 Pedidos con errores de escritura: reconoce «sandwidch» y «sanwi», cantidades por línea y productos repetidos sin perder unidades. [Reglas, pruebas y actualización](docs/revisiones/pedidos-con-errores.md).
 
 Pedido completo: si un artículo no se identifica o no está disponible, reinicia el borrador y pide repetir toda la lista. Interpreta expresiones naturales con el catálogo vigente y validación del servidor, sin una tabla fija de abreviaciones. [Flujo actualizado y pruebas](docs/revisiones/pedido-completo.md).

@@ -3,6 +3,8 @@ import {referencePriceRequest} from '../../shared/reference-prices.js';
 import {orderStatusRequested,registeredOrderCommand} from '../../shared/order-status.js';
 import {hydrateDeliveryLocation,deliveryQueryRequested,registeredDeliveryCommand} from '../../shared/delivery-context.js';
 import {deterministicConversation,fulfillmentCommand} from '../../shared/conversation-context.js';
+import {readOnlyCommand,paymentChoice} from '../../shared/customer-messages.js';
+import {humanRequested} from '../../shared/message-intent.js';
 import {interpret} from './conversation.mjs';
 import {withCategories} from '../../shared/catalog.js';
 import {randomUUID} from 'node:crypto';
@@ -60,15 +62,18 @@ export async function runWorker({budgetMs=45000}={}){
     if(config.bot_enabled!==true){result={kind:'ignore',cart,reply:''};}
     else {
     const mode=fulfillmentCommand(text,cart,activeCatalog(cart.service,catalog,menus));
-    if(mode)command=mode;
+    const advisory=readOnlyCommand(text,cart,activeCatalog(cart.service,catalog,menus));
+    if(paymentChoice(text,config))command={intent:'payment_selection'};
+    else if(advisory)command=advisory;
+    else if(mode)command=mode;
     else if((cart.service==='buffet'||serviceChoice(text)==='buffet')&&referencePriceRequest(text,cart,activeCatalog('buffet',catalog,menus)))command={intent:'reference_prices'};
     else if(!cart.items?.length&&orderStatusRequested(text))command=registeredOrderCommand(text,lastOrders[0]);
     else if(!cart.items?.length&&deliveryQueryRequested(text))command=registeredDeliveryCommand(lastOrders[0],cart);
     else if(!cart.service&&!serviceChoice(text))command={intent:'help'};
     else if(serviceChoice(text))command={intent:'menu'};
     else if(/^(men[uú]|carta|cat[aá]logo)[.!?]?$/i.test(text.trim()))command={intent:'menu'};
-    else if(!isConfirmation(text)&&!['/cancelar','/reiniciar','cancelar pedido'].includes(text.toLowerCase())&&!/\b(humano|persona|encargado|empleado)\b/i.test(text)){
-     try{command=deterministicConversation(text,cart,activeCatalog(cart.service,catalog,menus),{categories:cart.service==='chiperia'?categories:[]})||await interpret(text,cart,activeCatalog(cart.service,catalog,menus),config);}catch{command={intent:'human'};}
+    else if(!isConfirmation(text)&&!['/cancelar','/reiniciar','cancelar pedido'].includes(text.toLowerCase())&&!humanRequested(text)){
+     try{command=deterministicConversation(text,cart,activeCatalog(cart.service,catalog,menus),{categories:cart.service==='chiperia'?categories:[]})||await interpret(text,cart,activeCatalog(cart.service,catalog,menus),config);}catch{command={intent:'technical_error'};}
     }
     result=reduceOrder({text,cart,catalog,command,profileName:client[0]?.name,settings:config,menus});
     }

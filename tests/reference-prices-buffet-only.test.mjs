@@ -52,11 +52,12 @@ test('La chipería mantiene precios unitarios, cálculos y carrito separados del
   assert.match(back.reply, /3\.500/);
 });
 
-test('El cambio directo a buffet con consulta de precios no rompe la selección del servicio', () => {
-  const result = answer('¿Cuáles son los precios por kilo del buffet?', emptyCart('Prueba', 'chiperia'));
-  assert.equal(result.cart.service, 'buffet');
+test('Una consulta de precios del buffet informa las tarifas sin cambiar el servicio ni el borrador activo', () => {
+  const before={...emptyCart('Prueba','chiperia'),...quote([{variant_id:'tradicional-base',qty:2}],'chiperia',catalog)};
+  const result = answer('¿Cuáles son los precios por kilo del buffet?', before);
+  assert.deepEqual(result.cart,before);
   assert.match(result.reply, /40\.000/);
-  assert.deepEqual(result.cart.items, []);
+  assert.equal(result.cart.items[0].qty,2);
 });
 
 test('Consulta de menú del buffet seguida de pedido conserva el flujo humano de precios', () => {

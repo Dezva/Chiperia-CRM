@@ -1,18 +1,24 @@
 import {referencePriceRequest,referencePriceReply} from './reference-prices.js';
 import {deterministicConversation,fulfillmentCommand} from './conversation-context.js';
-import {commercialText,sellable} from './catalog.js';
+import {commercialText,sellable,productName} from './catalog.js';
 import {deliveryMode,WEEK_DAYS} from './settings.js';
 import {CATEGORY_IDS} from './buffet-categories.js';
 import {normalize,isConfirmation} from './order-engine.js';
 import {fulfillmentChoice} from './fulfillment.js';
 import {repeatOrderPrompt,retryOrderCommand} from './order-retry.js';
+import {readOnlyCommand,informationReply,paymentChoice} from './customer-messages.js';
+import {humanRequested,isPurchaseAttempt,messageIntent} from './message-intent.js';
+import {matchCommercial} from './catalog-matching.js';
+import {invalidOrderCommand} from './order-diagnostics.js';
+import {cartOperationCommand} from './cart-operations.js';
+import {explicitReferenceCommand} from './delivery-context.js';
 export {normalize,isConfirmation,fulfillmentChoice};
 export const money=n=>n==null?'Pendiente':new Intl.NumberFormat('es-PY').format(n)+' Gs.';
 const servicePrompt='Elegí un servicio para continuar: respondé Buffet o Chipería.';
 export const greeting='¡Buenas! Bienvenido a El Viejo. '+servicePrompt;
 export const defaults={business_name:'El Viejo',branch:'Ruta Villeta–Alberdi',logo_url:'assets/abuelito-provisional.png',timezone:'America/Asuncion',bot_enabled:false,payment_methods:['Efectivo','Tarjeta de débito','Tarjeta de crédito','QR','Transferencia'],fulfillment_modes:['retiro','delivery'],schedules:{buffet:{days:[1,2,3,4,5,6],open:'11:00',close:'15:00',delivery_mode:'scheduled',delivery_open:'12:00',delivery_close:'14:00'},chiperia:{days:[1,2,3,4,5,6],open:'05:15',close:'18:30',delivery_mode:'pending',delivery_open:null,delivery_close:null}},reference_prices:{guarniciones:40000,carne:80000,pollo_chancho:75000}};
 export function localDate(now=new Date()){return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Asuncion',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);}
-export function serviceChoice(text){const t=normalize(text);const b=/\bbuffet\b/.test(t),c=/\bchiperia\b/.test(t);return b&&c?'mixed':b?'buffet':c?'chiperia':null;}
+export function serviceChoice(text){const t=normalize(text),state=messageIntent(text);if(['query','social','human'].includes(state.kind)&&!/\b(?:quiero ver|mostrame|ver el menu)\b/.test(t))return null;if(state.kind==='unknown'&&!/^(?:el |la )?(?:buffet|chiperia)(?: y (?:buffet|chiperia))?[.!]*$/.test(t))return null;const b=/\bbuffet\b/.test(t),c=/\bchiperia\b/.test(t);return b&&c?'mixed':b?'buffet':c?'chiperia':null;}
 export function emptyCart(name='',service=null){return {items:[],service,customer_name:name,fulfillment:'a_coordinar',address:'',payment:'a_coordinar',quoted:false,delivery_location_id:null,saved_carts:{}};}
 export function activeCatalog(service,catalog,menus=[],now=new Date()){
  if(service==='buffet'){const menu=menus.find(m=>m.day===localDate(now)&&m.status==='published');return (menu?.items||[]).map(p=>({...p,service:'buffet',price:null,variant:'Base',available:p.available!==false&&CATEGORY_IDS.includes(p.category_id)&&p.category_id!=='pending'}));}
@@ -62,15 +68,16 @@ export function confirmation(order,input,catalog,{mode,owner_id,actor,menus=[],n
 export function sameItems(a,b){const fields=['variant_id','name','variant','qty','unit_price','notes'];return JSON.stringify(a.map(x=>fields.map(k=>x[k])))===JSON.stringify(b.map(x=>fields.map(k=>x[k])));}
 export function summary(cart){
  const modality={retiro:'Retiro en el local',delivery:'Delivery'}[cart.fulfillment]||'A coordinar';
- return cart.items.map(x=>`${x.qty} × ${x.name}${x.variant==='Base'?'':' · '+x.variant}${cart.service==='chiperia'?': '+money(x.qty*x.unit_price):x.notes?' · Observación: '+x.notes:''}`).join('\n')+'\n'+(cart.service==='buffet'?'Buffet: importe pendiente; el encargado lo acordará con vos.':'Subtotal: '+money(cart.items.reduce((s,x)=>s+x.qty*x.unit_price,0)))+'\nModalidad: '+modality+(cart.fulfillment==='retiro'?'.':'. Envío pendiente de revisión.');
+ return cart.items.map(x=>`${x.qty} × ${x.name}${x.variant==='Base'?'':' · '+x.variant}${cart.service==='chiperia'?': '+money(x.qty*x.unit_price)+' ('+money(x.unit_price)+' c/u)':''}${x.notes?' · Observación: '+x.notes:''}`).join('\n')+'\n'+(cart.service==='buffet'?'Buffet: importe pendiente; el encargado lo acordará con vos.':'Subtotal: '+money(cart.items.reduce((s,x)=>s+x.qty*x.unit_price,0))+'\nLa aceptación final corresponde al local.')+'\nModalidad: '+modality+(cart.fulfillment==='retiro'?'.':'. Envío pendiente de revisión.');
 }
 export function demoCommand(text,cart,catalog,categories=[]){
+ const advisory=readOnlyCommand(text,cart,catalog);if(advisory)return advisory;
  const t=normalize(text);
  const mode=fulfillmentCommand(text,cart,catalog);if(mode)return mode;
  if(cart?.service==='buffet'){const pricing=referencePriceRequest(text,cart,catalog);if(pricing)return pricing;}
  if(/menu|catalogo|carta/.test(t))return {intent:'menu'};
  const resolved=deterministicConversation(text,cart,catalog,{categories});if(resolved)return resolved;
- return cart?.service&&!['/cancelar','/reiniciar','cancelar pedido'].includes(t)?retryOrderCommand():{intent:'help'};
+ return cart?.service?invalidOrderCommand(text,cart,catalog):{intent:'help'};
 }
 function restartedOrder(cart,command){
  const reset={...cart,items:[],subtotal:cart.service==='buffet'?null:0,quoted:false,conversation:{retry_order:true}};
@@ -79,29 +86,59 @@ function restartedOrder(cart,command){
 }
 export function reduceOrder({text,cart:old,catalog,menus=[],command={},profileName='',settings=defaults,now=new Date()}){
  let cart=structuredClone({...emptyCart(profileName),...old});let selected=serviceChoice(text);
- for(const saved of Object.values(cart.saved_carts||{}))if(saved&&typeof saved==='object')saved.delivery_location_id=null;
+ const payment=paymentChoice(text,settings);
+ if(payment&&cart.service)return {cart:{...cart,payment},kind:'reply',reply:'Anoté '+payment+' como forma de pago. Los productos y cantidades siguen igual. El local confirmará la recepción del pago por separado.'};
+ const advisory=readOnlyCommand(text,cart,activeCatalog(cart.service,catalog,menus,now));
+ if(advisory){
+  if(advisory.intent==='cross_service_query'){
+   const target=advisory.service,targetCart={...cart,service:target,items:[],conversation:{}},targetList=activeCatalog(target,catalog,menus,now);
+   let reply;
+   if(advisory.topic==='price'&&target==='buffet')reply=referencePriceReply(text,targetList,settings);
+   else if(['hours','payments','location'].includes(advisory.topic))reply=informationReply({topic:advisory.topic},targetCart,settings);
+   else if(advisory.topic==='menu')reply=targetList.filter(p=>target==='buffet'?p.available:sellable(p)).map(p=>productName(p)+(target==='chiperia'?': '+money(p.price):'')).join('\n')||'Todavía no hay opciones publicadas para ese servicio.';
+   else {const response=readOnlyCommand(text,targetCart,targetList);reply=response?.message||'Podés escribir '+(target==='buffet'?'BUFFET':'CHIPERÍA')+' para consultar las opciones de ese servicio.';}
+   return {cart,kind:'reply',reply:reply+'\nTu borrador de '+(cart.service==='buffet'?'buffet':'chipería')+' sigue igual.'};
+  }
+  return {cart,kind:'reply',reply:advisory.intent==='info'?informationReply(advisory,cart,settings):advisory.message};
+ }
+ if(command.intent==='technical_error')return {cart,kind:'reply',reply:'No pude procesar tu mensaje en este momento. Tu pedido sigue guardado. ¿Podés intentarlo nuevamente? Si el problema continúa, podés pedir atención del equipo.'};
+ if(['/cancelar','/reiniciar','cancelar pedido'].includes(normalize(text)))return {cart:{...emptyCart(cart.customer_name||profileName,cart.service),saved_carts:cart.saved_carts||{}},kind:'reply',reply:'Borrador cancelado. Conservamos el historial y el borrador del otro servicio.'};
  if(selected==='mixed')return {cart,kind:'reply',reply:'Prepararemos solicitudes separadas y relacionadas para buffet y chipería. Empezá eligiendo un servicio; el equipo revisará un único delivery si corresponde.'};
- if(selected&&selected!==cart.service){const initialPoint=cart.service?null:cart.delivery_location_id;const saved=cart.saved_carts||{};if(cart.service)saved[cart.service]={...cart,delivery_location_id:null,saved_carts:{}};cart={...emptyCart(profileName,selected),...saved[selected],service:selected,saved_carts:saved,delivery_location_id:initialPoint};delete cart.reference_price_context;command=(selected==='buffet'&&referencePriceRequest(text,cart,activeCatalog('buffet',catalog,menus,now)))||{intent:'menu'};}
+ if(selected&&selected!==cart.service){const initialPoint=cart.service?null:cart.delivery_location_id;const saved=cart.saved_carts||{};for(const draft of Object.values(saved))if(draft&&typeof draft==='object')draft.delivery_location_id=null;if(cart.service)saved[cart.service]={...cart,delivery_location_id:null,saved_carts:{}};cart={...emptyCart(profileName,selected),...saved[selected],service:selected,saved_carts:saved,delivery_location_id:initialPoint};delete cart.reference_price_context;command=(selected==='buffet'&&referencePriceRequest(text,cart,activeCatalog('buffet',catalog,menus,now)))||{intent:'menu'};}
  const list=cart.service?activeCatalog(cart.service,catalog,menus,now):[];
+ const reference=explicitReferenceCommand(text,cart),edit=reference?null:cartOperationCommand(text,cart,list);if(reference)command=reference;else if(edit)command=edit;
  const mode=fulfillmentCommand(text,cart,list);if(mode)command=mode;
  if(!mode&&cart.service==='buffet'&&(command.intent==='reference_prices'||referencePriceRequest(text,cart,list))){
   cart.reference_price_context=true;
   return {cart,kind:'reply',reply:referencePriceReply(text,list,settings)};
  }
- if(/\b(humano|persona|encargado|empleado)\b/.test(normalize(text))||command.intent==='human')return {cart,kind:'human',reply:'El equipo continuará la atención. El asistente queda pausado.'};
+ if(humanRequested(text)||command.intent==='human')return {cart,kind:'human',reply:'El equipo continuará la atención. El asistente queda pausado.'};
  if(!cart.service){
   if(command.intent==='clarify')return {cart,kind:'reply',reply:command.message};
   const affirmative=/^si(?: por favor)?$/.test(commercialText(text));
   return {cart,kind:'reply',reply:affirmative?servicePrompt:greeting};
  }
- if(command.intent==='retry_order')return restartedOrder(cart,command);
+ if(command.intent==='retry_order'){
+  const found=matchCommercial(text,list,{context:cart.conversation});
+  if(!isPurchaseAttempt(text,{hasProducts:!!(found.matches.length||found.ambiguous.length)}))return {cart,kind:'reply',reply:'No entendí bien el mensaje. Tu pedido sigue guardado. ¿Podés explicarme qué necesitás?'};
+  return restartedOrder(cart,command);
+ }
  delete cart.reference_price_context;
  if(command.context)cart.conversation=structuredClone(command.context);
  if(['retiro','delivery'].includes(command.fulfillment)){cart.fulfillment=command.fulfillment;if(command.fulfillment==='retiro')cart.delivery_location_id=null;}
  if(command.intent==='clarify')return {cart,kind:'reply',reply:command.message};
- if(command.intent==='draft_status'){let changed=false;try{const fresh=quote(cart.items,cart.service,list);changed=!sameItems(fresh.items,cart.items);cart={...cart,...fresh,quoted:changed?false:cart.quoted};}catch{return {cart:{...cart,quoted:false},kind:'reply',reply:'Tengo tu pedido en borrador, pero cambió la disponibilidad. El equipo debe ayudarte a revisar los productos.'};}const next=cart.fulfillment==='a_coordinar'?'¿Vas a retirar o querés delivery?':cart.fulfillment==='delivery'&&!cart.delivery_location_id?'Falta tu ubicación puntual de WhatsApp.':'Escribí CONFIRMAR PEDIDO para enviar la solicitud al local.';return {cart,kind:'reply',reply:'Tengo este pedido en borrador; todavía no está enviado al local:\n'+summary(cart)+'\n'+(changed?'Los precios se actualizaron. Revisá el resumen.\n':'')+next};}
- if(['/cancelar','/reiniciar','cancelar pedido'].includes(normalize(text)))return {cart:emptyCart(profileName,cart.service),kind:'reply',reply:'Borrador cancelado. Conservamos el historial.'};
+ if(command.intent==='draft_status'){
+  let preview=cart,changed=false;try{const fresh=quote(cart.items,cart.service,list);changed=!sameItems(fresh.items,cart.items);preview={...cart,...fresh};}catch{return {cart,kind:'reply',reply:'Tengo tu pedido en borrador, pero cambió la disponibilidad. El equipo puede ayudarte a revisarlo. No lo envié al local.'};}
+  const next=cart.fulfillment==='a_coordinar'?'¿Vas a retirar o querés delivery?':cart.fulfillment==='delivery'&&!cart.delivery_location_id?'Falta tu ubicación puntual de WhatsApp.':'Escribí CONFIRMAR PEDIDO para enviar la solicitud al local.';
+  return {cart,kind:'reply',reply:'Tengo este pedido en borrador; todavía no está enviado al local:\n'+summary(preview)+'\n'+(changed?'Los precios cambiaron; se revisarán antes de enviar.\n':'')+next};
+ }
  if(!list.length&&cart.service==='buffet')return {cart,kind:'reply',reply:'Todavía no hay menú del buffet confirmado para hoy. Podés pedir atención del encargado.'};
+ if(command.intent==='cart_edit'){
+  if(!edit)return {cart,kind:'reply',reply:'No pude validar ese cambio. Tu pedido sigue guardado.'};
+  if(!edit.items.length)return {cart:{...cart,items:[],subtotal:cart.service==='buffet'?null:0,quoted:false,conversation:{}},kind:'reply',reply:edit.message+' El borrador quedó sin artículos. Podés enviarme un pedido nuevo cuando quieras.'};
+  try{cart={...cart,...quote(edit.items,cart.service,list),quoted:true};}catch{return restartedOrder(cart,invalidOrderCommand(text,cart,list,{reason:'Cambió la disponibilidad de los productos del borrador.'}));}
+  return {cart,kind:'reply',reply:edit.message+'\n'+summary(cart)+'\nEl local debe aceptar la solicitud cuando la envíes.'};
+ }
  if(command.intent==='update_cart'){try{cart={...cart,...quote(command.items,cart.service,list),quoted:false};}catch{return restartedOrder(cart,retryOrderCommand('Cambió la disponibilidad del catálogo y no pude registrar todos los productos.'));}}
  const choice=fulfillmentChoice(text)||command.fulfillment;
  if(['retiro','delivery'].includes(choice)){cart.fulfillment=choice;if(choice==='retiro')cart.delivery_location_id=null;}

@@ -41,7 +41,7 @@ test('Cantidades: límites de línea, comas, punto y coma, prefijos y sufijos',(
  const prior=say('1 empanada de pollo').cart;
  assert.deepEqual(quantities(say(screenshot,prior).cart.items),[['empanada-pollo',1],...expected]);
  for(const text of ['Sanwich verdura 20\nSandwidch verdura 20','Sanwich verdura 0\nSandwidch verdura 2']){
-  const result=say(text,prior);assert.deepEqual(result.cart,prior);assert.match(result.reply,/entre 1 y 30/);
+  const result=say(text,prior);assert.deepEqual(result.cart.items,[]);assert.equal(result.cart.conversation.retry_order,true);assert.match(result.reply,/entre 1 y 30/);
  }
  const oneProduct=say('Sanwich verdura 1\nSandwidch verdura 2').cart;
  assert.equal(oneProduct.conversation.focus_ids.length,1);

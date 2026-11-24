@@ -18,9 +18,15 @@ export function registeredDeliveryCommand(order,cart){
 export function deliveryReferenceCommand(text,cart){
  if(cart?.fulfillment!=='delivery'||!cart.items?.length)return null;
  const value=String(text||'').trim(),t=categoryKey(value);
- if(!cart.delivery_location_id&&!/^(?:referencia|porton|frente|al lado|casa|calle|avenida)\b/.test(t))return null;
+ // Tener un punto adjunto no convierte cualquier mensaje informal en una dirección.
+ if(!/\b(?:referencia|porton|frente|al lado|casa|calle|avenida|esquina|barrio|direccion|detras|edificio|departamento|piso|kilometro)\b/.test(t))return null;
  if(value.length<3||value.length>500||/^(?:hola|buenas|gracias|ok|dale|listo|si|no|no se|nose|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|confirmar pedido|confirmo pedido|delivery|retiro|menu|catalogo|carta)[.!?]*$/.test(t)||value.startsWith('/')||/[?¿]/.test(value))return null;
  return {intent:'summary',address:value};
+}
+export function explicitReferenceCommand(text,cart){
+ const t=categoryKey(text);if(/[?¿]/.test(String(text))||!/^(?:referencia\b|direccion\s*:)/.test(t))return null;
+ if(t.replace(/^(?:referencia|direccion)\s*:?\s*/,'').trim().length<3)return null;
+ return deliveryReferenceCommand(text,cart);
 }
 // Solo la fila consultada por ID y conversación puede hidratar el punto del borrador.
 export function hydrateDeliveryLocation(cart,point){

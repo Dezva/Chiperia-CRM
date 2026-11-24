@@ -117,6 +117,8 @@ La [corrección de autenticación ASCII](revisiones/worker-auth-ascii.md) evita 
 
 ## Preparación del despliegue final — publicación manual
 
+La última preparación del chatbot se describe en [pulido integral: validación y un único despliegue manual](revisiones/pulido-integral.md). No necesita SQL nuevo ni cambios de variables de entorno.
+
 Por instrucción posterior del responsable, los cambios de preparación del chatbot en `fix/tarifas-buffet-sin-regresion-chiperia` llevan `[skip netlify]`. La autorización anterior de publicar automáticamente queda sustituida para este trabajo. No generar un deploy ni activar auto publishing mientras se prepara la versión final.
 
 Se retira de `netlify.toml` la regla `build.ignore = "exit 1"` que forzaba los builds. La marca `[skip netlify]` omite el build de este commit por la integración Git; GitHub Actions puede seguir validando el código. El workflow del repositorio únicamente ejecuta build y pruebas y no publica en Netlify.
