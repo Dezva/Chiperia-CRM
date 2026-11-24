@@ -1,5 +1,6 @@
 import {fulfillmentChoice,stripFulfillment} from './fulfillment.js';
 import {commercialText,productTerms,productName,sellable} from './catalog.js';
+import {correctOrderTokens} from './order-spelling.js';
 export const quantityWords={un:1,uno:1,una:1,dos:2,tres:3,cuatro:4,cinco:5,seis:6,siete:7,ocho:8,nueve:9,diez:10,once:11,doce:12,otro:1,otra:1};
 const filler=new Set('quiero quisiera querria dame llevo llevar necesito pedir pedido agregar agrega agregame por favor y e con para el la lo los las me mi a unidad unidades unidade gracias hola buenas voy querer solo solamente unicamente mas suma sumame sumar anade anadi te dije lee lea mensaje bien'.split(' '));
 // Una cantidad declarada establece el total; sumar requiere una intención de incremento.
@@ -11,27 +12,39 @@ export function orderOperation(text){const t=orderText(text);if(/\b(?:solo|solam
 export function inlineFulfillment(text){const natural=fulfillmentChoice(text);if(natural)return natural;const t=commercialText(text);if(/[?¿]/.test(String(text))||/\b(?:no|sin)\b.*\b(?:delivery|retiro|retirar)\b/.test(t))return null;if(/\bdelivery\b|\ba domicilio\b/.test(t))return 'delivery';if(/\b(?:retiro|retirar)\b/.test(t))return 'retiro';return null;}
 function prepared(text){return orderText(stripFulfillment(text)).replace(/\b(?:lee|lea) (?:el )?mensaje(?: bien)?\b/g,' ').replace(/\b(?:deja|deje) repetir(?: el mismo mensaje)?\b/g,' ').replace(/\bpara (?:delivery|retiro|retirar)\b|\ba domicilio\b/g,' ').replace(/\bdelivery\b/g,' ').trim();}
 export function matchCommercial(text,catalog,{context}={}){
- const tokens=prepared(text).split(/\s+/).filter(Boolean),terms=new Map();
+ const tokens=[],segments=[],terms=new Map();
+ // La cantidad de una línea nunca pertenece a un producto de otra línea.
+ for(const line of String(text).replace(/^\s*no\s*,/i,'').split(/[\r\n;,]+/)){
+  const start=tokens.length;tokens.push(...prepared(line).split(/\s+/).filter(Boolean));
+  for(let i=start;i<tokens.length;i++)segments[i]={start,end:tokens.length};
+ }
  function add(term,p){const list=terms.get(term)||[];list.push(p);terms.set(term,list);}
  for(const p of catalog)for(const t of productTerms(p))add(t,p);
+ if(catalog.length&&catalog.every(p=>p.service==='chiperia')){
+  const vocabulary=new Set([...terms.keys()].flatMap(term=>term.split(' ')));
+  const corrected=correctOrderTokens(tokens,vocabulary);tokens.splice(0,tokens.length,...corrected);
+ }
  const pending=context?.pending,focus=context?.focus_ids||[];
  const contextual=catalog.filter(p=>pending?.candidate_ids?.includes(p.id)||focus.some(id=>catalog.find(x=>x.id===id)?.name===p.name));
- const used=new Set(),matches=[],ambiguous=[];let last=null;
+ const used=new Set(),matches=[],ambiguous=[],hits=[];let last=null;
  for(let i=0;i<tokens.length;){let hit=null;
   const variants=[...contextual];
   if(last&&tokens.slice(last.end,i).some(t=>['y','e'].includes(t)))variants.push(...catalog.filter(p=>p.name===last.product.name));
-  for(let n=tokens.length-i;n>=1;n--){const term=tokens.slice(i,i+n).join(' '),exact=terms.get(term),variant=variants.filter(p=>p.variant&&p.variant!=='Base'&&commercialText(p.variant)===term);const products=[...(exact||[]),...variant];
+  for(let n=segments[i].end-i;n>=1;n--){const term=tokens.slice(i,i+n).join(' '),exact=terms.get(term),variant=variants.filter(p=>p.variant&&p.variant!=='Base'&&commercialText(p.variant)===term);const products=[...(exact||[]),...variant];
    if(products.length){hit={n,term,products:[...new Map(products.map(p=>[p.id,p])).values()],variantOnly:!exact};break;}}
-  if(hit){let quantity=null,quantityIndex=null;
+  if(hit){const m={product:hit.products[0],products:hit.products,term:hit.term,variantOnly:hit.variantOnly,start:i,end:i+hit.n};hits.push(m);last=m;i+=hit.n;}else{i++;}
+ }
+ last=null;
+ for(let index=0;index<hits.length;index++){
+   const m=hits[index],i=m.start;let quantity=null,quantityIndex=null;
    // Una cantidad pertenece a su segmento, no al último número de todo el mensaje.
-   const start=last?.end||0;
+   const start=Math.max(last?.end||0,segments[i].start);
    for(let j=start;j<i;j++)if(!used.has(j)&&(quantityWords[tokens[j]]||/^\d+$/.test(tokens[j]))){quantity=quantityWords[tokens[j]]||Number(tokens[j]);quantityIndex=j;}
    if(quantityIndex!==null)used.add(quantityIndex);
-   if(quantity===null){for(let j=i+hit.n;j<tokens.length;j++){if(['y','e'].includes(tokens[j]))break;if(quantityWords[tokens[j]]||/^\d+$/.test(tokens[j])){quantity=quantityWords[tokens[j]]||Number(tokens[j]);used.add(j);break;}}}
-   for(let j=i;j<i+hit.n;j++)used.add(j);
-   const m={product:hit.products[0],products:hit.products,qty:quantity??pending?.qty??1,explicitQty:quantity!==null,term:hit.term,variantOnly:hit.variantOnly,start:i,end:i+hit.n};
-   if(hit.products.length>1)ambiguous.push(m);else matches.push(m);last=m;i+=hit.n;
-  }else{i++;}
+   if(quantity===null){for(let j=m.end;j<Math.min(segments[i].end,hits[index+1]?.start??tokens.length);j++){if(['y','e'].includes(tokens[j]))break;if(quantityWords[tokens[j]]||/^\d+$/.test(tokens[j])){quantity=quantityWords[tokens[j]]||Number(tokens[j]);used.add(j);break;}}}
+   for(let j=i;j<m.end;j++)used.add(j);
+   Object.assign(m,{qty:quantity??pending?.qty??1,explicitQty:quantity!==null});
+   if(m.products.length>1)ambiguous.push(m);else matches.push(m);last=m;
  }
  for(let i=0;i<tokens.length;i++)if(filler.has(tokens[i]))used.add(i);
  const unknown=tokens.filter((_,i)=>!used.has(i));return {matches,ambiguous,unknown,tokens};
@@ -44,7 +57,9 @@ export function requestedItems(found,cart,text){
  const items=new Map((cart?.items||[]).map(x=>[x.variant_id,{variant_id:x.variant_id,qty:x.qty,notes:x.notes||''}]));
  const pending=cart?.conversation?.pending,correction=orderOperation(text)==='set';
  const resolvedContext=found.matches.every(m=>m.variantOnly)&&!/^\s*(?:agrega|agregame|sumame)/.test(commercialText(text));
- for(const m of found.matches){let operation=pending?.operation||(correction?'set':'add');
+ const mentions=new Map();
+ for(const m of found.matches){const previous=mentions.get(m.product.id);mentions.set(m.product.id,previous?{...m,qty:previous.qty+m.qty,explicitQty:previous.explicitQty||m.explicitQty}:m);}
+ for(const m of mentions.values()){let operation=pending?.operation||(correction?'set':'add');
   if(resolvedContext&&!pending)operation='set';
   let qty=m.qty;
   if(operation==='set'&&!m.explicitQty&&!pending){const focused=(cart?.conversation?.focus_ids||[]).map(id=>items.get(id)).filter(Boolean);if(focused.length===1&&(m.product.service!=='buffet'||m.variantOnly))qty=focused[0].qty;else if(items.has(m.product.id))qty=items.get(m.product.id).qty;}
@@ -57,6 +72,7 @@ export function deterministicOrder(text,cart,catalog){
  const found=matchCommercial(text,catalog,{context:cart?.conversation}),fulfillment=inlineFulfillment(text),operation=orderOperation(text);
  if(/^\s*no\s+(?:quiero|agreg|sum)/i.test(String(text)))return {found,command:{intent:'clarify',message:'¿Querés quitar un producto o cambiar su cantidad? Indicá el artículo y el total.'}};
  if(!found.matches.length&&!found.ambiguous.length)return {found,command:null};
+ if(found.ambiguous.length&&found.unknown.length)return {found,command:{intent:'clarify',message:'No pude identificar todos los artículos: «'+found.unknown.join(' ')+'». ¿Podés aclarar el producto y su variedad? Conservamos tu carrito sin agregar productos.'}};
  if(found.ambiguous.length){const a=found.ambiguous[0],command=clarifyOptions(a.products,a.qty,operation);command.context.pending.resolved_items=found.matches.map(m=>({id:m.product.id,qty:m.qty}));command.context.pending.remaining=found.ambiguous.slice(1).map(m=>({candidate_ids:m.products.map(p=>p.id),qty:m.qty}));return {found,command:{...command,...(fulfillment?{fulfillment}:{})}};}
  const blocked=found.matches.filter(m=>m.product.service==='buffet'?!m.product.available:!sellable(m.product));
  if(blocked.length)return {found,command:{intent:'clarify',message:blocked.map(m=>productName(m.product)+': '+(m.product.service==='buffet'?'no disponible en el menú de hoy':m.product.price===null?'precio individual pendiente de confirmar':'no disponible para nuevos pedidos')).join('. ')+'. El equipo puede ayudarte. Conservamos tu carrito sin agregar productos.',...(fulfillment?{fulfillment}:{})}};
@@ -65,8 +81,8 @@ export function deterministicOrder(text,cart,catalog){
  const pending=cart?.conversation?.pending;
  if(pending&&found.matches.every(m=>m.variantOnly)){const resolved=[...(pending.resolved_items||[]),...found.matches.map(m=>({id:m.product.id,qty:m.qty}))];if(pending.remaining?.length){const next=pending.remaining[0],command=clarifyOptions(catalog.filter(p=>next.candidate_ids.includes(p.id)),next.qty,pending.operation);command.context.pending.resolved_items=resolved;command.context.pending.remaining=pending.remaining.slice(1);return {found,command};}found.matches=resolved.map(m=>({product:catalog.find(p=>p.id===m.id),qty:m.qty,explicitQty:true,variantOnly:true})).filter(m=>m.product);}
  const items=requestedItems(found,cart,text);
- if(items.some(x=>x.qty<1||x.qty>30))return {found,command:{intent:'clarify',message:'Indicá entre 1 y 30 unidades por producto.'}};
- return {found,command:{intent:'update_cart',items,context:{focus_ids:found.matches.map(m=>m.product.id)},...(fulfillment?{fulfillment}:{})}};
+ if(found.matches.some(m=>m.qty<1||m.qty>30)||items.some(x=>x.qty<1||x.qty>30))return {found,command:{intent:'clarify',message:'Indicá entre 1 y 30 unidades por producto.'}};
+ return {found,command:{intent:'update_cart',items,context:{focus_ids:[...new Set(found.matches.map(m=>m.product.id))]},...(fulfillment?{fulfillment}:{})}};
 }
 
 // Observaciones explícitas del buffet, separadas del nombre y de las cantidades.

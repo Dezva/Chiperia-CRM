@@ -13,7 +13,7 @@ export async function interpret(text,cart,catalog,settings){
   if(!r.ok)throw Error('ai_unavailable');const data=await r.json();await recordUsage({model:typeof data.model==='string'?data.model:model,operation:'conversation',usage:data.usage,contextChars:context.length});
   if(data.status&&data.status!=='completed'||data.error||(data.output||[]).some(o=>(o.content||[]).some(c=>c.type==='refusal')))throw Error('invalid_interpretation');
   let command=JSON.parse(extractText(data));
-  try{command=validateInterpretation(command,text,cart,catalog,candidates);}catch(error){if(attempt===0&&candidates.length<catalog.length){candidates=recoverCandidates(text,cart,catalog,{expanded:true});continue;}return {intent:'clarify',message:'¿Qué producto querés ajustar? Conservamos tu carrito; indicá el artículo y su cantidad total.'};}
+  try{command=validateInterpretation(command,text,cart,catalog,candidates);}catch(error){if(attempt===0&&candidates.length<catalog.length){candidates=recoverCandidates(text,cart,catalog,{expanded:true});continue;}return {intent:'clarify',message:'No pude identificar con seguridad todos los productos y cantidades. Conservamos tu carrito. ¿Podés aclarar el nombre y la cantidad de cada artículo, o preferís hablar con el equipo?'};}
   if(command.intent==='reference_prices')return command;
   if(command.intent==='help'&&attempt===0&&candidates.length<catalog.length){candidates=recoverCandidates(text,cart,catalog,{expanded:true});continue;}
   if(command.intent==='help')return {intent:'clarify',message:'No encontré una opción inequívoca en el catálogo vigente. ¿Qué artículo querés o preferís hablar con el equipo?'};

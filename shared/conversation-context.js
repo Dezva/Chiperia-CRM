@@ -93,5 +93,5 @@ export function validateInterpretation(command,text,cart,catalog,candidates){
  if(command.items.length!==expected.size)throw Error('commercial_equivalence_unconfirmed');
  const expectedNotes=new Map(requestedItems(found,cart,text).map(x=>[x.variant_id,x.notes||'']));
  const seen=new Set();for(const item of command.items){if(seen.has(item.variant_id)||!candidates.some(p=>p.id===item.variant_id)||!Number.isSafeInteger(item.qty)||item.qty<1||item.qty>30||item.qty!==expected.get(item.variant_id)||typeof item.notes!=='string'||item.notes.length>300)throw Error('commercial_equivalence_unconfirmed');if(cart?.service==='buffet'){if(item.notes&&item.notes!==expectedNotes.get(item.variant_id))throw Error('commercial_equivalence_unconfirmed');item.notes=expectedNotes.get(item.variant_id)||'';}seen.add(item.variant_id);}
- command.context={focus_ids:found.matches.map(m=>m.product.id)};const fulfillment=inlineFulfillment(text);if(fulfillment)command.fulfillment=fulfillment;return command;
+ command.context={focus_ids:[...new Set(found.matches.map(m=>m.product.id))]};const fulfillment=inlineFulfillment(text);if(fulfillment)command.fulfillment=fulfillment;return command;
 }
