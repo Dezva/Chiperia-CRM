@@ -9,11 +9,12 @@ const byName = new Map([
   ['carne', 'carne'], ['carne vacuna', 'carne'], ['carne res', 'carne'], ['res', 'carne'],
   ['pollo', 'pollo_chancho'], ['chancho', 'pollo_chancho'], ['cerdo', 'pollo_chancho'],
   ['pollo y chancho', 'pollo_chancho'], ['pollo y cerdo', 'pollo_chancho'],
+  ['pollo chancho', 'pollo_chancho'], ['pollo cerdo', 'pollo_chancho'],
 ]);
-const priceTerms = /\b(?:precios?|tarifas?|costos?|cuanto (?:me |nos )?(?:cuesta|cuestan|sale|salen|vale|valen|esta|estan|es|seria|queda|quedaria|cobran)|(?:a|en) cuanto|a como|presupuesto|cotizacion)\b/;
+const priceTerms = /\b(?:precios?|tarifas?|costos?|valor(?:es)?|cuanto (?:me |nos )?(?:cuesta|cuestan|sale|salen|vale|valen|esta|estan|es|seria|queda|quedaria|cobran)|(?:a|en) cuanto|a como|presupuesto|cotizacion)\b/;
 const quantityReply = /\b(?:\d+|un|una|unos|unas|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|media|medio|otra|otro|mas)\b/;
 const orderTerms = /\b(?:quiero|voy a querer|quisiera|necesito|deme|dame|agrega\w*|suma\w*|anad\w*|pedir|pido|llevo|mandame|enviame|cambia\w*|corrig\w*|corregi)\b/;
-const otherTopic = /^(?:hola|buenas|gracias|menu|carta|catalogo|que tienen|que hay|horarios?|forma de pago|metodo de pago|pago|ubicacion|localizacion|referencia|confirmo|confirmar|cancelar|reiniciar|retiro|delivery|a domicilio)\b/;
+const otherTopic = /^(?:hola|buenas|gracias|menu|carta|catalogo|que tienen|que hay|tienen|hay|esta disponible|estan disponibles|horarios?|forma de pago|metodo de pago|pago|ubicacion|localizacion|referencia|confirmo|confirmar|cancelar|reiniciar|retiro|delivery|a domicilio)\b/;
 const handoff = /\b(?:humano|persona|encargado|empleado)\b/;
 const finalAmount = /\b(?:total(?:es)?|subtotal(?:es)?|presupuesto|cotizacion|descuentos?|impuestos?|cuanto (?:me |nos )?(?:queda|quedaria)|(?:mi|el) pedido|envio|delivery)\b/;
 const subjectWords = new Set('a al como cual cuales cuanto cuesta cuestan sale salen vale valen esta estan es son seria precio tarifa costo valor figura kilo kilogramo kg kgr por el la lo los las un uno una y que tiene tienen tenes me nos uds ustedes cobra cobran saben saber podrias podes decir dirias decime dime pasame referencia buffet hoy ahora porfa favor gracias consultar consulta quiero quisiera para del de'.split(' '));
@@ -24,15 +25,18 @@ function subjectOf(text) {
   return commercialText(text).split(' ').filter(word => !subjectWords.has(word)).join(' ');
 }
 
-export function referencePriceRequest(text, cart) {
+export function referencePriceRequest(text, cart, menu = []) {
   const value = categoryKey(text).replace(/[^a-z0-9\s]/g, ' ').trim().replace(/\s+/g, ' ');
   if (/\b(?:hablar con|pasame con|que me atienda) (?:un[ae]? |el |la )?(?:humano|persona|encargado|empleado)\b/.test(value)) return null;
   if (priceTerms.test(value) || /^(?:y )?(?:cuanto|por (?:kilos?|kg|kilogramos?))\b/.test(value) &&
       !/\b(?:tarda|demora|dura|tiempo)\b/.test(value)) return { intent: 'reference_prices' };
+  if (/\b(?:que|cuales)\b/.test(value) && /\b(?:platos|opciones|hay|tienen|venden|sirven)\b/.test(value)) return null;
+  const subject = subjectOf(value);
+  const knownSubject = byName.has(subject) || menu.some(dish => productTerms(dish).some(term => subjectOf(term) === subject));
   // Un nombre suelto después de una consulta sigue siendo una consulta.
-  if (cart?.reference_price_context && value && !orderTerms.test(value) && !quantityReply.test(value) && !otherTopic.test(value) &&
+  if (cart?.reference_price_context && value && !orderTerms.test(value) && (!quantityReply.test(value) || knownSubject) && !otherTopic.test(value) &&
       !handoff.test(value) && !fulfillmentChoice(value) && !orderStatusRequested(value) &&
-      !deliveryQueryRequested(text) && !deliveryReferenceCommand(text, cart)) {
+      !deliveryQueryRequested(text) && (!deliveryReferenceCommand(text, cart) || knownSubject || /^(?:del|de la|y el|y la)\b/.test(value))) {
     return { intent: 'reference_prices' };
   }
   return null;

@@ -65,14 +65,14 @@ test('Consulta de menú del buffet seguida de pedido conserva el flujo humano de
   assert.match(menu.reply, /Tallarín/);
   assert.match(menu.reply, /encargado/);
   const prices = answer('¿Cuánto sale el tallarín?', menu.cart);
-  assert.match(prices.reply, /40\\.000/);
+  assert.match(prices.reply, /40\.000/);
   const selection = 'voy a querer el tallarin';
   const command = deterministicConversation(selection, prices.cart, activeCatalog('buffet', catalog, menus));
   assert.equal(command?.intent, 'update_cart');
   const placed = answer(selection, prices.cart, command);
   assert.match(placed.reply, /1 × Tallarín/);
   assert.match(placed.reply, /Modalidad: A coordinar/);
-  assert.match(placed.reply, /¿Vas a retirar o querés delivery\\?/);
+  assert.match(placed.reply, /¿Vas a retirar o querés delivery\?/);
   assert.equal(placed.cart.items[0].unit_price, null);
   assert.equal(placed.cart.subtotal, null);
   assert.equal(placed.cart.reference_price_context, undefined);

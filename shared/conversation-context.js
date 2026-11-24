@@ -1,7 +1,9 @@
+import {BUFFET_CATEGORIES} from './buffet-categories.js';
+import {referencePriceRequest} from './reference-prices.js';
 import {orderStatusRequested} from './order-status.js';
 import {deliveryStatusCommand,deliveryReferenceCommand} from './delivery-context.js';
 import {commercialText,productTerms,productName,sellable} from './catalog.js';
-import {matchCommercial,deterministicOrder,quantityWords,orderOperation,inlineFulfillment,orderText,requestedItems,clarifyOptions} from './catalog-matching.js';
+import {matchCommercial,deterministicOrder,buffetOrder,quantityWords,orderOperation,inlineFulfillment,orderText,requestedItems,clarifyOptions} from './catalog-matching.js';
 const grammatical=new Set('producto productos porfa porfavor podes podria podrias traer traeme pasame preparame enviame mandame favor quiero quisiera necesito gustaria me el la lo los las un una uno y e para a mi agregar agrega agregame dame llevo llevar pedir pedido con sin bien caliente calientes frio fria queso sal azucar por favor gracias voy querer te dije al final total cambia cambiar solo solamente unicamente no'.split(' '));
 export function categoryRequest(text,catalog,categories=[]){
  const t=commercialText(text),groups=categories.length?categories:[...new Map(catalog.filter(p=>p.category).map(p=>[p.category_id||p.category,{id:p.category_id||p.category,name:p.category,active:p.category_active!==false}])).values()];
@@ -36,15 +38,21 @@ function quantityFollowup(text,cart,catalog){
  return {intent:'update_cart',items,context:{focus_ids:[id]},...(inlineFulfillment(text)?{fulfillment:inlineFulfillment(text)}:{})};
 }
 export function deterministicConversation(text,cart,catalog,{categories=[]}={}){
+ if(cart?.service==='buffet'){const pricing=referencePriceRequest(text,cart,catalog);if(pricing)return pricing;}
  if(orderStatusRequested(text)&&cart?.items?.length)return {intent:'draft_status'};
  const status=deliveryStatusCommand(text,cart);if(status)return status;
  const t=commercialText(text);
  if(/^(horario|horarios|forma pago|forma pago disponible|metodo pago|metodo pago disponible)$/.test(t))return {intent:'info'};
- const found=matchCommercial(text,catalog,{context:cart?.conversation}),category=categoryRequest(text,catalog,categories),isQuery=/\b(?:que|cual|clase|tipo|vendes|vende|venden|tienen|tiene|hay|mostra|mostrame|solo|unicamente|cuanto|menu|catalogo|carta)\b/.test(t)||category?.category_names?.some(name=>commercialText(name)===t);
+ const found=matchCommercial(text,catalog,{context:cart?.conversation}),category=categoryRequest(text,catalog,cart?.service==='buffet'?BUFFET_CATEGORIES:categories),isQuery=/\b(?:que|cual|clase|tipo|vendes|vende|venden|tienen|tiene|hay|mostra|mostrame|solo|unicamente|cuanto|menu|catalogo|carta)\b/.test(t)||category?.category_names?.some(name=>commercialText(name)===t);
+ if(cart?.service==='buffet'){
+  if(/\b(?:menu|carta)\b/.test(t)||/\b(?:que|cual)\b/.test(t)&&/\b(?:plato|hay|tienen|opcion|sirven|venden)\b/.test(t))return {intent:'menu',...(category||{})};
+  if(/\b(?:tienen|tiene|hay|disponible|venden)\b/.test(t)&&found.matches.length)return {intent:'clarify',message:found.matches.map(m=>productName(m.product)+(m.product.available?' está disponible en el menú de hoy.':' no está disponible en el menú de hoy.')).join('\n')+' No cambié tu pedido.'};
+ }
  // Un nombre/variante específicos gana a una categoría; una consulta de categoría no arma carritos.
  if(category&&isQuery&&!found.matches.some(m=>m.product.variant&&m.product.variant!=='Base')&&!found.matches.some(m=>m.product.name!==m.product.category&&!m.product.legacy_generic))return {intent:'menu',...category};
  if(category&&isQuery&&!found.matches.length)return {intent:'menu',...category};
  if(!found.matches.length&&!found.ambiguous.length){const followup=quantityFollowup(text,cart,catalog);if(followup)return followup;}
+ const noted=cart?.service==='buffet'?buffetOrder(text,cart,catalog):null;
  const resolved=deterministicOrder(text,cart,catalog);
  if(/\b(precio|cuanto|cuesta|sale|tienen|hay|disponible)\b/.test(t)){
   if(category&&!found.matches.length)return {intent:'menu',...category};
@@ -52,11 +60,13 @@ export function deterministicConversation(text,cart,catalog,{categories=[]}={}){
   if(f.matches.length)return {intent:'clarify',message:f.matches.map(m=>productName(m.product)+': '+(m.product.service==='buffet'?'importe a acordar con el encargado':new Intl.NumberFormat('es-PY').format(m.product.price)+' Gs.')).join('\n')+'\nNo agregué productos al carrito.'};
   return {intent:'clarify',message:'¿De qué producto querés consultar el precio?'};
  }
+ if(noted)return noted;
  if(resolved.command)return resolved.command;
  if(/\b(?:repetir|lee|mensaje)\b/.test(t)&&!found.matches.length)return {intent:'clarify',message:cart?.conversation?.pending?'Decime la variedad que preferís; conservamos la cantidad que pediste.':'Decime qué producto o categoría querés revisar y te muestro solo esas opciones.'};
  return found.matches.length||found.ambiguous.length?null:deliveryReferenceCommand(text,cart);
 }
 export function validateInterpretation(command,text,cart,catalog,candidates){
+ if(cart?.service==='buffet'&&referencePriceRequest(text,cart,catalog))return {intent:'reference_prices'};
  if(!command||typeof command!=='object'||!['update_cart','menu','info','summary','human','help'].includes(command.intent))throw Error('invalid_interpretation');
  if(command.intent==='menu'){const request=categoryRequest(text,catalog);if(request)Object.assign(command,request);else if(command.category){const group=categoryRequest(command.category,catalog);if(!group)throw Error('commercial_equivalence_unconfirmed');Object.assign(command,group);}return command;}
  if(command.intent!=='update_cart')return command;
@@ -68,6 +78,7 @@ export function validateInterpretation(command,text,cart,catalog,candidates){
  if(cart?.conversation?.pending?.resolved_items?.length&&found.matches.every(m=>m.variantOnly))found.matches=[...cart.conversation.pending.resolved_items.map(m=>({product:catalog.find(p=>p.id===m.id),qty:m.qty,explicitQty:true,variantOnly:true})).filter(m=>m.product),...found.matches];
  const expected=new Map(requestedItems(found,cart,text).map(x=>[x.variant_id,x.qty]));
  if(command.items.length!==expected.size)throw Error('commercial_equivalence_unconfirmed');
- const seen=new Set();for(const item of command.items){if(seen.has(item.variant_id)||!candidates.some(p=>p.id===item.variant_id)||!Number.isSafeInteger(item.qty)||item.qty<1||item.qty>30||item.qty!==expected.get(item.variant_id)||typeof item.notes!=='string'||item.notes.length>300)throw Error('commercial_equivalence_unconfirmed');seen.add(item.variant_id);}
+ const expectedNotes=new Map(requestedItems(found,cart,text).map(x=>[x.variant_id,x.notes||'']));
+ const seen=new Set();for(const item of command.items){if(seen.has(item.variant_id)||!candidates.some(p=>p.id===item.variant_id)||!Number.isSafeInteger(item.qty)||item.qty<1||item.qty>30||item.qty!==expected.get(item.variant_id)||typeof item.notes!=='string'||item.notes.length>300)throw Error('commercial_equivalence_unconfirmed');if(cart?.service==='buffet'){if(item.notes&&item.notes!==expectedNotes.get(item.variant_id))throw Error('commercial_equivalence_unconfirmed');item.notes=expectedNotes.get(item.variant_id)||'';}seen.add(item.variant_id);}
  command.context={focus_ids:found.matches.map(m=>m.product.id)};const fulfillment=inlineFulfillment(text);if(fulfillment)command.fulfillment=fulfillment;return command;
 }

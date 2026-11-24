@@ -106,3 +106,7 @@ Desde V1.6 aplicar únicamente 016 antes del código compatible de la misma rama
 ## V1.7: pedidos, delivery sin referencia y finanzas
 
 Desde una base en 015, aplicar **016 si falta y después 017**, antes de un único despliegue manual del código compatible. Seguir [la guía V1.7](revisiones/v1.7-pedidos-finanzas.md) para comprobaciones, recuperación ante fallos y límites históricos. No volver a ejecutar migraciones anteriores. No se eliminan pedidos al instalar.
+
+## Buffet: consultas, pedidos y tarifas vigentes
+
+La actualización del [PR #1](https://github.com/Dezva/Chiperia-CRM/pull/1), en `fix/tarifas-buffet-sin-regresion-chiperia`, no añade SQL para una base en V1.7. Revisar [la guía de actualización](revisiones/buffet-flujo-tarifas.md) y realizar un único despliegue manual del commit aprobado, conservando conexiones y tarifas del CRM.

@@ -34,7 +34,7 @@ export async function runWorker({budgetMs=45000}={}){
   const c=job.conversation;
   try{
    const settings=await db('/rest/v1/guarni_settings?id=eq.true');
-   const config={...defaults,...settings[0]?.config};
+   const config={...defaults,...settings[0]?.config,reference_prices:settings[0]?.config?.reference_prices||{}};
    const botEnabled=env('BOT_ENABLED')==='true'&&config.bot_enabled===true;
    if(['location','invalid_location','live_location'].includes(job.message.content_type)){
     await rpc('guarni_process_location',{p_token:token,p_job:job.job.id,p_reply_enabled:botEnabled});
@@ -52,7 +52,7 @@ export async function runWorker({budgetMs=45000}={}){
     let command;
     if(config.bot_enabled!==true){result={kind:'ignore',cart,reply:''};}
     else {
-    if((cart.service==='buffet'||serviceChoice(text)==='buffet')&&referencePriceRequest(text,cart))command={intent:'reference_prices'};
+    if((cart.service==='buffet'||serviceChoice(text)==='buffet')&&referencePriceRequest(text,cart,activeCatalog('buffet',catalog,menus)))command={intent:'reference_prices'};
     else if(!cart.items?.length&&orderStatusRequested(text))command=registeredOrderCommand(text,lastOrders[0]);
     else if(!cart.items?.length&&deliveryQueryRequested(text))command=registeredDeliveryCommand(lastOrders[0],cart);
     else if(!cart.service&&!serviceChoice(text))command={intent:'help'};

@@ -46,7 +46,7 @@ export function requestedItems(found,cart,text){
  for(const m of found.matches){let operation=pending?.operation||(correction?'set':'add');
   if(resolvedContext&&!pending)operation='set';
   let qty=m.qty;
-  if(operation==='set'&&!m.explicitQty&&!pending){const focused=(cart?.conversation?.focus_ids||[]).map(id=>items.get(id)).filter(Boolean);if(focused.length===1)qty=focused[0].qty;else if(items.has(m.product.id))qty=items.get(m.product.id).qty;}
+  if(operation==='set'&&!m.explicitQty&&!pending){const focused=(cart?.conversation?.focus_ids||[]).map(id=>items.get(id)).filter(Boolean);if(focused.length===1&&(m.product.service!=='buffet'||m.variantOnly))qty=focused[0].qty;else if(items.has(m.product.id))qty=items.get(m.product.id).qty;}
   if(resolvedContext&&operation==='set')for(const id of cart?.conversation?.focus_ids||[]){const previous=items.get(id);if(previous&&id!==m.product.id&&cart.items.find(x=>x.variant_id===id)?.name===m.product.name)items.delete(id);}
   const old=items.get(m.product.id);items.set(m.product.id,{variant_id:m.product.id,qty:(operation==='add'?old?.qty||0:0)+qty,notes:old?.notes||''});
  }
@@ -58,7 +58,7 @@ export function deterministicOrder(text,cart,catalog){
  if(!found.matches.length&&!found.ambiguous.length)return {found,command:null};
  if(found.ambiguous.length){const a=found.ambiguous[0],command=clarifyOptions(a.products,a.qty,operation);command.context.pending.resolved_items=found.matches.map(m=>({id:m.product.id,qty:m.qty}));command.context.pending.remaining=found.ambiguous.slice(1).map(m=>({candidate_ids:m.products.map(p=>p.id),qty:m.qty}));return {found,command:{...command,...(fulfillment?{fulfillment}:{})}};}
  const blocked=found.matches.filter(m=>m.product.service==='buffet'?!m.product.available:!sellable(m.product));
- if(blocked.length)return {found,command:{intent:'clarify',message:blocked.map(m=>productName(m.product)+': '+(m.product.price===null?'precio individual pendiente de confirmar':'no disponible para nuevos pedidos')).join('. ')+'. El equipo puede ayudarte. Conservamos tu carrito sin agregar productos.',...(fulfillment?{fulfillment}:{})}};
+ if(blocked.length)return {found,command:{intent:'clarify',message:blocked.map(m=>productName(m.product)+': '+(m.product.service==='buffet'?'no disponible en el menú de hoy':m.product.price===null?'precio individual pendiente de confirmar':'no disponible para nuevos pedidos')).join('. ')+'. El equipo puede ayudarte. Conservamos tu carrito sin agregar productos.',...(fulfillment?{fulfillment}:{})}};
  const correctionOnly=found.unknown.every(t=>['al','final','en','total','cambia','cambiar','cambiame','corrige','corregi','no'].includes(t));
  if(found.unknown.length&&!correctionOnly)return {found,command:null};
  const pending=cart?.conversation?.pending;
@@ -66,4 +66,29 @@ export function deterministicOrder(text,cart,catalog){
  const items=requestedItems(found,cart,text);
  if(items.some(x=>x.qty<1||x.qty>30))return {found,command:{intent:'clarify',message:'Indicá entre 1 y 30 unidades por producto.'}};
  return {found,command:{intent:'update_cart',items,context:{focus_ids:found.matches.map(m=>m.product.id)},...(fulfillment?{fulfillment}:{})}};
+}
+
+// Observaciones explícitas del buffet, separadas del nombre y de las cantidades.
+// No interpreta pesos ni usa tarifas; una segunda comida desconocida exige aclaración.
+export function buffetOrder(text,cart,catalog){
+ const original=matchCommercial(text,catalog,{context:cart?.conversation});
+ const all=[...original.matches,...original.ambiguous].sort((a,b)=>a.start-b.start);
+ const tokens=[...original.tokens],notes=new Map();let annotated=false;
+ const source=String(text),words=[...source.matchAll(/[\p{L}\p{N}]+/gu)].map(m=>({key:commercialText(m[0]),start:m.index,end:m.index+m[0].length})).filter(w=>w.key);
+ const literal=terms=>{const start=words.findIndex((_,i)=>terms.every((term,j)=>words[i+j]?.key===term));return start<0?terms.join(' '):source.slice(words[start].start,words[start+terms.length-1].end);};
+ for(const match of all){
+  let i=match.end;
+  if(/^\d+$/.test(tokens[i]||'')||quantityWords[tokens[i]])i++;
+  if(!['sin','con','bien','aparte','nota','observacion'].includes(tokens[i]))continue;
+  // «con» solo inicia una observación inequívoca: «con poca sal», no otro plato.
+  if(tokens[i]==='con'&&!['poca','poco','mucha','mucho','extra','bastante'].includes(tokens[i+1]))continue;
+  let end=i+1;while(end<tokens.length&&!['y','e'].includes(tokens[end]))end++;
+  if(end-i<2||all.some(other=>other!==match&&other.start>=i&&other.start<end))return {intent:'clarify',message:'¿Qué plato querés y qué observación lleva? Separá cada artículo con su cantidad. Conservamos el borrador.'};
+  const note=literal(tokens.slice(i,end));if(note.length>300)return {intent:'clarify',message:'La observación debe tener hasta 300 caracteres.'};
+  notes.set(match.product.id,note);for(let j=i;j<end;j++)tokens[j]='';annotated=true;
+ }
+ if(!annotated)return null;
+ const cleaned=tokens.filter(Boolean).join(' '),resolved=deterministicOrder(cleaned,cart,catalog);
+ if(resolved.command?.intent!=='update_cart')return resolved.command||{intent:'clarify',message:'No pude identificar todos los platos y observaciones. Indicá cada plato y su cantidad; conservamos el borrador.'};
+ return {...resolved.command,items:resolved.command.items.map(item=>({...item,notes:notes.get(item.variant_id)||item.notes}))};
 }
