@@ -1,3 +1,4 @@
+import {referencePriceRequest,referencePriceReply} from './reference-prices.js';
 import {deterministicConversation} from './conversation-context.js';
 import {sellable} from './catalog.js';
 import {deliveryMode,WEEK_DAYS} from './settings.js';
@@ -59,6 +60,7 @@ export function sameItems(a,b){const fields=['variant_id','name','variant','qty'
 export function summary(cart){return cart.items.map(x=>`${x.qty} × ${x.name}${x.variant==='Base'?'':' · '+x.variant}${cart.service==='chiperia'?': '+money(x.qty*x.unit_price):''}`).join('\n')+'\n'+(cart.service==='buffet'?'Buffet: importe pendiente; el encargado lo acordará con vos.':'Subtotal: '+money(cart.items.reduce((s,x)=>s+x.qty*x.unit_price,0)))+'\nModalidad: '+cart.fulfillment+'. Envío pendiente de revisión.';}
 export function demoCommand(text,cart,catalog,categories=[]){
  const t=normalize(text),choice=fulfillmentChoice(text);
+ if(cart?.service==='buffet'){const pricing=referencePriceRequest(text,cart);if(pricing)return pricing;}
  if(choice)return {intent:'summary',fulfillment:choice};
  if(/menu|catalogo|carta/.test(t))return {intent:'menu'};
  const resolved=deterministicConversation(text,cart,catalog,{categories});if(resolved)return resolved;
@@ -68,9 +70,14 @@ export function reduceOrder({text,cart:old,catalog,menus=[],command={},profileNa
  let cart=structuredClone({...emptyCart(profileName),...old});let selected=serviceChoice(text);
  for(const saved of Object.values(cart.saved_carts||{}))if(saved&&typeof saved==='object')saved.delivery_location_id=null;
  if(selected==='mixed')return {cart,kind:'reply',reply:'Prepararemos solicitudes separadas y relacionadas para buffet y chipería. Empezá eligiendo un servicio; el equipo revisará un único delivery si corresponde.'};
- if(selected&&selected!==cart.service){const initialPoint=cart.service?null:cart.delivery_location_id;const saved=cart.saved_carts||{};if(cart.service)saved[cart.service]={...cart,delivery_location_id:null,saved_carts:{}};cart={...emptyCart(profileName,selected),...saved[selected],service:selected,saved_carts:saved,delivery_location_id:initialPoint};command={intent:'menu'};}
+ if(selected&&selected!==cart.service){const initialPoint=cart.service?null:cart.delivery_location_id;const saved=cart.saved_carts||{};if(cart.service)saved[cart.service]={...cart,delivery_location_id:null,saved_carts:{}};cart={...emptyCart(profileName,selected),...saved[selected],service:selected,saved_carts:saved,delivery_location_id:initialPoint};delete cart.reference_price_context;command=(selected==='buffet'&&referencePriceRequest(text,cart))||{intent:'menu'};}
  if(!cart.service)return {cart,kind:'reply',reply:command.intent==='clarify'?command.message:greeting};
  const list=activeCatalog(cart.service,catalog,menus,now);
+ if(cart.service==='buffet'&&(command.intent==='reference_prices'||referencePriceRequest(text,cart))){
+  cart.reference_price_context=true;
+  return {cart,kind:'reply',reply:referencePriceReply(text,list,settings)};
+ }
+ delete cart.reference_price_context;
  if(command.context)cart.conversation=structuredClone(command.context);
  if(['retiro','delivery'].includes(command.fulfillment)){cart.fulfillment=command.fulfillment;if(command.fulfillment==='retiro')cart.delivery_location_id=null;}
  if(command.intent==='clarify')return {cart,kind:'reply',reply:command.message};
