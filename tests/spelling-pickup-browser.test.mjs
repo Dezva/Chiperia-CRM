@@ -17,7 +17,11 @@ test('Escritorio/móvil: pedido con errores, delivery rechazado en chipería y c
   const say=async text=>{await page.locator('#simulateForm input').fill(text);await page.getByRole('button',{name:'Simular mensaje',exact:true}).click();};
   const cart=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('el-viejo-demo-v1')).conversations[0].cart);
   const reply=()=>page.locator('.message.outbound .bubble').last();
-  await say('chipería');await say('2 sanwis de verdura');assert.equal((await cart()).subtotal,20000);assert.equal((await cart()).items[0].qty,2);
+  await say('chipería');await say('un sanwis de milnesa de polo');assert.equal((await cart()).items[0].variant_id,'sandwich-milanesa-de-pollo');assert.equal((await cart()).items[0].qty,1);assert.equal((await cart()).subtotal,13000);assert.match(await reply().innerText(),/1 × Sándwich.*Milanesa de pollo/);
+  for(const [width,height,label] of [[1440,950,'desktop'],[390,844,'mobile']]){
+   await page.setViewportSize({width,height});if(label==='mobile')await page.waitForFunction(()=>document.getElementById('sidebar').getBoundingClientRect().right<=0);await reply().scrollIntoViewIfNeeded();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:join(tmpdir(),'errores-multiples-'+label+'.png'),fullPage:true});
+  }
+  await page.setViewportSize({width:1440,height:950});await say('CANCELAR PEDIDO');await say('2 sanwis de verdura');assert.equal((await cart()).subtotal,20000);assert.equal((await cart()).items[0].qty,2);
   await say('delivery');assert.equal((await cart()).fulfillment,'a_coordinar');assert.match(await reply().innerText(),/solo con retiro/);assert.doesNotMatch(await reply().innerText(),/Enviá tu ubicación/);
   for(const [width,height,label] of [[1440,950,'desktop'],[390,844,'mobile']]){
    await page.setViewportSize({width,height});if(label==='mobile')await page.waitForFunction(()=>document.getElementById('sidebar').getBoundingClientRect().right<=0);

@@ -1,6 +1,6 @@
 import {fulfillmentChoice,stripFulfillment} from './fulfillment.js';
 import {commercialText,productTerms,productName,sellable} from './catalog.js';
-import {correctOrderTokens} from './order-spelling.js';
+import {correctOrderTokens,supportsSpellingPhrase} from './order-spelling.js';
 import {retryOrderCommand} from './order-retry.js';
 export const quantityWords={un:1,uno:1,una:1,dos:2,tres:3,cuatro:4,cinco:5,seis:6,siete:7,ocho:8,nueve:9,diez:10,once:11,doce:12,otro:1,otra:1};
 export const orderFillers=new Set(commercialText('quiero quisiera querria dame deme llevo llevar necesito pedir pedido agregar agrega agregame por favor y e con para el la lo los las me mi a unidad unidades unidade gracias hola buenas voy querer solo solamente unicamente mas suma sumame sumar anade anadi te dije lee lea mensaje bien entonces das darias podes podrias podria traeme preparame pasame enviame mandame gustaria').split(' '));
@@ -14,7 +14,7 @@ export function orderOperation(text){const t=orderText(text);if(/\b(?:solo|solam
 export function inlineFulfillment(text){const natural=fulfillmentChoice(text);if(natural)return natural;const t=commercialText(text);if(/[?¿]/.test(String(text))||/\b(?:no|sin)\b.*\b(?:delivery|retiro|retirar)\b/.test(t))return null;if(/\bdelivery\b|\ba domicilio\b/.test(t))return 'delivery';if(/\b(?:retiro|retirar)\b/.test(t))return 'retiro';return null;}
 function prepared(text){return orderText(stripFulfillment(text)).replace(/\b(?:lee|lea) (?:el )?mensaje(?: bien)?\b/g,' ').replace(/\b(?:deja|deje) repetir(?: el mismo mensaje)?\b/g,' ').replace(/\bpara (?:delivery|retiro|retirar)\b|\ba domicilio\b/g,' ').replace(/\bdelivery\b/g,' ').trim();}
 export function matchCommercial(text,catalog,{context,semantic=false}={}){
- const tokens=[],segments=[],terms=new Map(),shortNames=new Map(),semanticTerms=new Map(),weak=new Set();
+ const tokens=[],segments=[],terms=new Map(),shortNames=new Map(),semanticTerms=new Map(),weak=new Set(),supported=new Set();
  // La cantidad de una línea nunca pertenece a un producto de otra línea.
  for(const line of String(text).replace(/^\s*no\s*,/i,'').split(/[\r\n;,]+/)){
   const start=tokens.length;tokens.push(...prepared(line).split(/\s+/).filter(Boolean));
@@ -38,7 +38,11 @@ export function matchCommercial(text,catalog,{context,semantic=false}={}){
  }
  if(catalog.length&&catalog.every(p=>p.service===catalog[0].service)&&['chiperia','buffet'].includes(catalog[0].service)){
   const vocabulary=new Set([...terms.keys()].flatMap(term=>term.split(' ')));
-  const exact=correctOrderTokens(tokens,vocabulary),direct=correctOrderTokens(exact,vocabulary,{fuzzy:true}),corrected=semantic?correctOrderTokens(direct,vocabulary,{semantic:true}):direct;
+  const correct=(source,options)=>correctOrderTokens(source,vocabulary,options).map((token,i)=>filler.has(originalTokens[i])||quantityWords[originalTokens[i]]?originalTokens[i]:token);
+  const exact=correct(tokens),direct=correct(exact,{fuzzy:true}),corrected=semantic?correct(direct,{semantic:true}):direct;
+  // Una corrección larga, única y de una sola edición también aporta evidencia.
+  // No obligamos al cliente a escribir una palabra perfecta en cada artículo.
+  for(let i=0;i<tokens.length;i++)if(tokens[i].length>=6&&exact[i]!==tokens[i]&&exact[i]===corrected[i])supported.add(i);
   for(let i=0;i<tokens.length;i++)if(exact[i]!==direct[i])weak.add(i);
   for(let i=0;i<tokens.length;i++)if(direct[i]!==corrected[i])weak.add(i);
   tokens.splice(0,tokens.length,...corrected);
@@ -54,7 +58,10 @@ export function matchCommercial(text,catalog,{context,semantic=false}={}){
   for(let n=segments[i].end-i;n>=1;n--){const term=tokens.slice(i,i+n).join(' '),exact=terms.get(term),short=exact?null:shortNames.get(term),semanticHit=exact||short?null:semanticTerms.get(term),variant=variants.filter(p=>p.variant&&p.variant!=='Base'&&commercialText(p.variant)===term);const products=[...(exact||short||semanticHit||[]),...variant];
    if(products.length){hit={n,term,products:[...new Map(products.map(p=>[p.id,p])).values()],variantOnly:!exact&&!short&&!semanticHit,semanticHit:!!semanticHit};break;}}
   if(hit){const m={product:hit.products[0],products:hit.products,term:hit.term,variantOnly:hit.variantOnly,prefixOnly:!!shortNames.get(hit.term)&&!terms.has(hit.term),segmentEnd:segments[i].end,start:i,end:i+hit.n};
-   if((semantic&&hit.semanticHit)||Array.from({length:hit.n},(_,j)=>i+j).some(j=>weak.has(j)))m.unsafeSemantic=!originalTokens.slice(i,i+hit.n).some((word,j)=>!weak.has(i+j)&&word===tokens[i+j]&&word.length>=4&&!filler.has(word)&&!quantityWords[word]);
+   if((semantic&&hit.semanticHit)||Array.from({length:hit.n},(_,j)=>i+j).some(j=>weak.has(j))){
+    const evidence=originalTokens.slice(i,i+hit.n).map((source,j)=>({source,target:tokens[i+j],index:i+j})).filter(p=>p.target.length>=4&&!filler.has(p.target)&&!quantityWords[p.target]);
+    m.unsafeSemantic=!evidence.some(p=>!weak.has(p.index)&&(p.source===p.target||supported.has(p.index)))&&!supportsSpellingPhrase(evidence);
+   }
    hits.push(m);last=m;i+=hit.n;}else{i++;}
  }
  last=null;

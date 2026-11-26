@@ -6,9 +6,10 @@ Fecha: 26 de noviembre de 2026. Rama: `fix/tarifas-buffet-sin-regresion-chiperia
 
 El reconocimiento usa los nombres, variedades y sinónimos del catálogo actual de PostgreSQL o los platos publicados para hoy. No hay una lista de errores o apodos por alimento.
 
-- Conserva las correcciones inequívocas de una letra y las transposiciones. Amplía la búsqueda a dos ediciones en palabras de siete o más letras, con una distancia relativa máxima del 28 %, candidato más cercano único y otra palabra literal del mismo artículo. Así «milanese de pollo», «milanesse de pollo» y «milenesa de pollo» pueden identificar el plato publicado «Milanesa de pollo».
-- Reconoce abreviaciones de al menos cinco letras hacia palabras del catálogo de ocho o más letras, con raíz inicial compartida y otra palabra literal del artículo. Por ejemplo «sanwis de verdura» identifica Sándwich · Verdura si la opción es única, conserva la cantidad y usa su precio actual. También se exige candidato más cercano único; no se agregan equivalencias fijas.
-- Los nombres y sinónimos exactos tienen prioridad. No resuelve empates por disponibilidad ni precio; tampoco cambia carne por pollo ni bollo por bollito. Un segundo producto desconocido impide guardar parcialmente la lista.
+- Conserva las correcciones inequívocas de una letra y las transposiciones. Amplía la búsqueda a dos ediciones en palabras de siete o más letras, con una distancia relativa máxima del 28 %, candidato más cercano único y evidencia independiente dentro del mismo artículo. Así «milanese de pollo», «milanesse de pollo» y «milenesa de pollo» pueden identificar el plato publicado «Milanesa de pollo».
+- Reconoce abreviaciones de al menos cinco letras hacia palabras del catálogo de ocho o más letras, con raíz inicial compartida y evidencia independiente dentro del artículo. Por ejemplo «sanwis de verdura» identifica Sándwich · Verdura si la opción es única, conserva la cantidad y usa su precio actual. También se exige candidato más cercano único; no se agregan equivalencias fijas.
+- Tolera errores en varias palabras del mismo artículo, sin exigir que una se escriba perfectamente: «un sanwis de milnesa de polo» puede resolverse como Sándwich · Milanesa de pollo. Las palabras cortas admiten una letra omitida o de más, con evidencia del resto de la frase; no se cambian letras entre nombres cortos distintos. Las correcciones largas inequívocas de una edición también aportan evidencia. Para varias aproximaciones simultáneas se exigen al menos dos palabras distintas, una suficientemente larga, distancia normalizada individual de hasta 50 % y promedio de hasta 35 %. Solo se usan candidatos únicos del catálogo, sin descartar palabras sobrantes.
+- Las cantidades y palabras gramaticales reconocidas se protegen de la corrección: por ejemplo «tres» no se transforma en un nombre de producto parecido. Los nombres y sinónimos exactos tienen prioridad. No resuelve empates por disponibilidad ni precio; tampoco cambia carne por pollo ni bollo por bollito. Un segundo producto desconocido impide guardar parcialmente la lista.
 - Las expresiones más amplias siguen pasando por el modelo configurado y por la validación comercial del servidor. Si no se puede validar el pedido, pide repetir la lista completa; un fallo técnico conserva el borrador. No promete comprender cualquier error.
 - Cantidades, notas, disponibilidad y precios se validan como antes. Los productos nuevos no requieren cambios de código ni entrenamiento.
 
@@ -56,7 +57,7 @@ El push a la rama conserva el despliegue automático de Netlify previamente auto
 
 ## Validación
 
-Ejecución final local:
+Validación inicial (commit `865a483`):
 
 - `npm run build`: aprobado; conserva los 31 registros del catálogo.
 - `node --test --test-concurrency=2 tests/*.test.mjs`: 193 pruebas, 191 aprobadas, 0 fallos, 2 omisiones heredadas de contratos de UI anteriores. Incluye pruebas unitarias, PostgreSQL y navegador; duración aproximada de 118 segundos.
@@ -71,3 +72,11 @@ Las pruebas usan PostgreSQL embebido mediante PGlite y proveedor de IA simulado.
 Capturas de la demo: [escritorio](../capturas/ortografia-retiro-desktop.png) · [móvil](../capturas/ortografia-retiro-mobile.png). Registro completo: [pruebas](ortografia-y-retiro-pruebas.txt).
 
 GitHub Actions: el workflow `Validate El Viejo` ejecuta build y la suite completa en cada push y pull request. Las ejecuciones del commit publicado pueden consultarse en [Actions](https://github.com/Dezva/Chiperia-CRM/actions) y en [las comprobaciones del PR #1](https://github.com/Dezva/Chiperia-CRM/pull/1/checks). El resultado local no acredita por sí solo un despliegue publicado en Netlify.
+
+## Ampliación: errores en varias palabras
+
+La revisión añade pruebas con la frase exacta «un sanwis de milnesa de polo», cambios de cantidad y precio, varias líneas, productos nuevos con errores en nombre y variedad, agotados, variantes inexistentes, cantidades no inventadas y nombres cortos diferentes. No agrega equivalencias específicas de alimentos ni requiere una migración adicional. Mantiene 018 y la política de retiro en chipería.
+
+La prueba de PostgreSQL usa el worker completo y no llama a IA para esa frase. La solicitud permanece pendiente de aceptación humana; reconocer el producto no acepta automáticamente la venta. El navegador reproduce el mensaje en escritorio y móvil.
+
+[Captura escritorio](../capturas/errores-multiples-desktop.png) · [Captura móvil](../capturas/errores-multiples-mobile.png). Registro final: [suite completa](errores-multiples-pruebas.txt). Validación final de esta ampliación: `npm run build` aprobado; `node --test --test-concurrency=2 tests/*.test.mjs`: **197 pruebas, 195 aprobadas, 0 fallos y 2 omisiones heredadas**, aproximadamente 131 segundos. `git diff --check` aprobado. Las integraciones de prueba son simuladas; no se enviaron mensajes reales ni se modificó Supabase real.

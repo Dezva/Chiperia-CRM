@@ -18,6 +18,14 @@ function distance(a,b){
  return row[b.length];
 }
 
+// Varias palabras cercanas pueden confirmar una frase aunque ninguna sea literal.
+// El matcher ya exige correcciones únicas y conserva nombres exactos prioritarios.
+export function supportsSpellingPhrase(pairs){
+ if(new Set(pairs.map(p=>p.target)).size<2||!pairs.some(p=>p.source.length>=5&&p.target.length>=6))return false;
+ const scores=pairs.map(p=>distance(p.source,p.target)/Math.max(p.source.length,p.target.length));
+ return scores.every(score=>score<=.5)&&scores.reduce((sum,score)=>sum+score,0)/scores.length<=.35;
+}
+
 export function correctOrderTokens(tokens, vocabulary, {semantic=false,fuzzy=false}={}) {
  const words = [...vocabulary].filter(word => word.length >= 4 && /^[a-z]+$/.test(word));
  return tokens.map(token => {
@@ -31,15 +39,17 @@ export function correctOrderTokens(tokens, vocabulary, {semantic=false,fuzzy=fal
    const ranked=words.filter(word=>word.slice(0,3)===token.slice(0,3)).map(word=>({word,score:distance(token,word)/Math.max(token.length,word.length)})).filter(candidate=>candidate.score<=.5).sort((a,b)=>a.score-b.score);
    return ranked.length&&(!ranked[1]||ranked[0].score<ranked[1].score)?ranked[0].word:token;
   }
-  if (token.length < (fuzzy?5:6)) return token;
-  const candidates = token.length>=6?words.filter(word => oneEdit(token, word)):[];
+  if (token.length < (fuzzy?4:6)) return token;
+  // En palabras cortas solo una letra omitida o de más; nunca sustituir una
+  // letra de otro nombre comercial. Se validan dentro de una frase, no solas.
+  const candidates = words.filter(word => (token.length>=6||fuzzy&&Math.abs(word.length-token.length)===1)&&oneEdit(token,word));
   if(!candidates.length&&fuzzy){
    // Errores en nombres largos y abreviaciones con raíz compartida. El matcher
    // exige otra palabra literal del mismo artículo y descarta todos los empates.
    const ranked=words.map(word=>({word,edits:distance(token,word)})).filter(x=>{
     const score=x.edits/Math.max(token.length,x.word.length);
     return token.length>=7&&x.edits<=2&&score<=.28 ||
-     x.word.length>=8&&x.word.length>=token.length+2&&x.word.slice(0,3)===token.slice(0,3)&&score<=.5;
+     token.length>=5&&x.word.length>=8&&x.word.length>=token.length+2&&x.word.slice(0,3)===token.slice(0,3)&&score<=.5;
    }).sort((a,b)=>a.edits-b.edits);
    if(ranked.length&&(!ranked[1]||ranked[0].edits<ranked[1].edits))return ranked[0].word;
   }
