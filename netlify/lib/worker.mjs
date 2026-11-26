@@ -46,7 +46,14 @@ export async function runWorker({budgetMs=45000}={}){
    const config={...defaults,...settings[0]?.config,reference_prices:settings[0]?.config?.reference_prices||{}};
    const botEnabled=env('BOT_ENABLED')==='true'&&config.bot_enabled===true;
    if(['location','invalid_location','live_location'].includes(job.message.content_type)){
-    await rpc('guarni_process_location',{p_token:token,p_job:job.job.id,p_reply_enabled:botEnabled});
+    let pickupOnly=c.cart?.service==='chiperia';
+    if(pickupOnly&&!c.cart.items?.length){
+     const orders=await db('/rest/v1/guarni_orders?conversation_id=eq.'+c.id+'&select=service,fulfillment,status');
+     pickupOnly=!orders.some(o=>o.fulfillment==='delivery'&&['accepted','preparing','ready','out_for_delivery',...(o.service==='buffet'?['pending']:[])].includes(o.status));
+    }
+    if(pickupOnly&&c.mode==='bot'&&botEnabled){
+     await rpc('guarni_finish',{p_token:token,p_job:job.job.id,p_revision:c.revision,p_cart:{...c.cart,fulfillment:c.cart.fulfillment==='delivery'?'a_coordinar':c.cart.fulfillment,delivery_location_id:null},p_body:'La chipería trabaja solo con retiro en el local; el delivery corresponde al buffet. No necesitás enviar una ubicación para retirar. Conservamos tus productos.',p_kind:'reply'});
+    }else await rpc('guarni_process_location',{p_token:token,p_job:job.job.id,p_reply_enabled:botEnabled});
     count++;
     continue;
    }
@@ -62,7 +69,7 @@ export async function runWorker({budgetMs=45000}={}){
     if(config.bot_enabled!==true){result={kind:'ignore',cart,reply:''};}
     else {
     const mode=fulfillmentCommand(text,cart,activeCatalog(cart.service,catalog,menus));
-    const advisory=readOnlyCommand(text,cart,activeCatalog(cart.service,catalog,menus));
+    const advisory=readOnlyCommand(text,cart,activeCatalog(cart.service,catalog,menus),config);
     if(paymentChoice(text,config))command={intent:'payment_selection'};
     else if(advisory)command=advisory;
     else if(mode)command=mode;

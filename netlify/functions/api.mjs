@@ -66,6 +66,17 @@ export default async request=>{
   const body=JSON.parse(raw);if(!allowed.has(body.action))return json({error:'Acción inválida.'},400);
   if(['catalog','catalog_category'].includes(body.action)){if(m.role!=='admin'&&m.catalog_editor!==true)return json({error:'Necesitás permiso de edición de catálogo.'},403);try{(body.action==='catalog'?validateProduct:validateCategory)(body.data);}catch(error){return json({error:error.message},400);}}
   if(body.action==='settings'){if(m.role!=='admin')return json({error:'Esta acción requiere un administrador.'},403);try{validateSettings(body.data?.config);}catch(error){return json({error:error.message},400);}}
+  // Aplica también antes de instalar 018; la base agrega la misma defensa.
+  if(body.action==='create_order'||['order_details','order_status'].includes(body.action)){
+   const d=body.data||{};
+   let service=d.service,fulfillment=d.fulfillment;
+   if(body.action!=='create_order'&&(body.action==='order_details'||d.status==='accepted')){
+    if(!uuid(d.id))return json({error:'Pedido inválido.'},400);
+    const orders=await db('/rest/v1/guarni_orders?id=eq.'+d.id+'&select=service,fulfillment');
+    service=orders[0]?.service;if(body.action==='order_status')fulfillment=orders[0]?.fulfillment;
+   }
+   if(service==='chiperia'&&fulfillment==='delivery')return json({error:'La chipería trabaja solo con retiro en el local. El delivery corresponde al buffet.'},400);
+  }
   if(body.action==='assign_location'){
    const data=body.data||{};
    if(!uuid(data.order_id)||!uuid(data.location_id)||(data.expected_location_id!=null&&!uuid(data.expected_location_id)))return json({error:'Registro inválido.'},400);

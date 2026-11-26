@@ -8,7 +8,7 @@ import {localDate} from '../shared/viejo-engine.js';
 const output=items=>({intent:'update_cart',items,customer_name:'',fulfillment:'a_coordinar',address:'',payment:'a_coordinar',category:'',query:''});
 const item=(id,qty,notes='')=>({variant_id:id,qty,notes});
 async function fixture(t){
- const c=await databaseV11({v17:true});t.after(()=>c.db.close());t.after(mockEnvironment());
+ const c=await databaseV11({v17:true,pickup:true});t.after(()=>c.db.close());t.after(mockEnvironment());
  let ai=async()=>{throw Error('El recorrido determinista no debe llamar IA');},calls=0;
  const bridge=restBridge(c);t.mock.method(globalThis,'fetch',async(url,options)=>{
   if(new URL(url).hostname==='fixture-ai.test'){calls++;return ai(JSON.parse(options.body));}
@@ -25,7 +25,7 @@ async function fixture(t){
  return {...c,say,chat,aiBehavior,aiCalls:()=>calls,bridge};
 }
 
-test('PGlite/worker: conversación completa con consultas, notas, incrementos, corrección, eliminación, delivery y aceptación humana',async t=>{
+test('PGlite/worker: conversación completa con consultas, notas, incrementos, corrección, eliminación, retiro y aceptación humana',async t=>{
  const c=await fixture(t);await c.say('chipería');let result=await c.say('Quiero dos empanadas de carne sin cebolla');
  assert.equal(result.cart.items[0].notes,'sin cebolla');
  for(const text of ['Gracias.','Perfecto.','¿Dónde están ubicados?','¿Hasta qué hora atienden?','¿Puedo pagar por transferencia?','¿Tienen pizza?','¿Puedo pasar a retirar?','¿Cuánto falta para mi pedido?','Necesito ayuda','Quiero ver mi pedido para retirar']){
@@ -37,17 +37,16 @@ test('PGlite/worker: conversación completa con consultas, notas, incrementos, c
  result=await c.say('Al final quiero solamente dos');assert.equal(result.cart.items[1].qty,2);assert.equal(result.cart.items[0].notes,'sin cebolla');
  result=await c.say('Quitame las empanadas');assert.match(result.reply,/Carne.*Pollo/);assert.equal(result.cart.items.length,2);
  result=await c.say('Pollo');assert.equal(result.cart.items.length,1);assert.equal(result.cart.items[0].notes,'sin cebolla');assert.equal(result.cart.subtotal,12000);
- await c.say('delivery');result=await c.say('CONFIRMAR PEDIDO');assert.match(result.reply,/ubicación puntual/);assert.equal((await c.one('select count(*)::int n from guarni_orders')).n,0);
- const current=await c.chat();await c.rpc('guarni_ingest_location',[randomUUID(),current.wa_id,'Prueba',{latitude:-25.3,longitude:-57.5},'location']);await runWorker();
- result=await c.say('¿Puedo pagar por transferencia?');assert.ok(result.cart.delivery_location_id);result=await c.say('Referencia: frente al local de empanadas de carne, portón azul');assert.match(result.cart.address,/local de empanadas de carne/);assert.equal(result.cart.items[0].qty,2);result=await c.say('Pago con transferencia');assert.equal(result.cart.payment,'Transferencia');const confirmation=randomUUID();result=await c.say('CONFIRMAR PEDIDO',confirmation);
+ result=await c.say('delivery');assert.match(result.reply,/solo con retiro/);result=await c.say('CONFIRMAR PEDIDO');assert.match(result.reply,/RETIRO/);assert.equal((await c.one('select count(*)::int n from guarni_orders')).n,0);
+ await c.say('retiro');result=await c.say('¿Puedo pagar por transferencia?');assert.equal(result.cart.delivery_location_id,null);assert.equal(result.cart.items[0].qty,2);result=await c.say('Pago con transferencia');assert.equal(result.cart.payment,'Transferencia');const confirmation=randomUUID();result=await c.say('CONFIRMAR PEDIDO',confirmation);
  assert.match(result.reply,/PENDIENTE DE ACEPTACIÓN/);await c.say('CONFIRMAR PEDIDO',confirmation);
- const orders=(await c.db.query('select * from guarni_orders')).rows;assert.equal(orders.length,1);const order=orders[0];assert.equal(order.subtotal,12000);assert.equal(order.total,null);assert.equal(order.fulfillment,'delivery');assert.equal(order.items[0].notes,'sin cebolla');assert.equal(order.payment,'Transferencia');assert.equal(order.payment_status,'pending');
- await c.staff('order_status',{id:order.id,status:'accepted',expected_items:order.items,expected_version:order.version,fulfillment:'delivery',shipping_fee:8000,schedule_reviewed:true,location_reviewed:true});
- assert.equal((await c.one('select total from guarni_orders')).total,20000);assert.equal(c.aiCalls(),0);
+ const orders=(await c.db.query('select * from guarni_orders')).rows;assert.equal(orders.length,1);const order=orders[0];assert.equal(order.subtotal,12000);assert.equal(order.total,null);assert.equal(order.fulfillment,'retiro');assert.equal(order.items[0].notes,'sin cebolla');assert.equal(order.payment,'Transferencia');assert.equal(order.payment_status,'pending');
+ await c.staff('order_status',{id:order.id,status:'accepted',expected_items:order.items,expected_version:order.version,fulfillment:'retiro',shipping_fee:0,schedule_reviewed:true,location_reviewed:true});
+ assert.equal((await c.one('select total from guarni_orders')).total,12000);assert.equal(c.aiCalls(),0);
 });
 
 test('PGlite/worker: timeout, conexión, HTTP y JSON inválido tienen reintentos acotados sin borrar ni pausar el pedido',async t=>{
- const c=await fixture(t);await c.say('chipería');await c.say('dos empanadas de carne sin cebolla');await c.say('delivery');
+ const c=await fixture(t);await c.say('chipería');await c.say('dos empanadas de carne sin cebolla');await c.say('retiro');
  let current=await c.chat();await c.rpc('guarni_ingest_location',[randomUUID(),current.wa_id,'Prueba',{latitude:-25.3,longitude:-57.5},'location']);await runWorker();
  const original=(await c.chat()).cart;
  const failures=[
@@ -70,7 +69,7 @@ test('PGlite/worker: timeout, conexión, HTTP y JSON inválido tienen reintentos
  }
  assert.equal((await c.one('select count(*)::int n from guarni_orders')).n,0);
  c.aiBehavior(async()=>Response.json({output_text:JSON.stringify({...output([item('empanada-carne',2,'sin cebolla'),item('sandwich-milanesa-de-pollo',1)]),fulfillment:'retiro',address:'INVENTADA',customer_name:'INVENTADO',payment:'Efectivo'})}));
- let result=await c.say('un sangui de pollo');assert.equal(result.mode,'bot');assert.equal(result.cart.items.length,2);assert.equal(result.cart.fulfillment,'delivery');assert.equal(result.cart.delivery_location_id,original.delivery_location_id);assert.equal(result.cart.customer_name,original.customer_name);assert.equal(result.cart.address,original.address);assert.equal(result.cart.payment,original.payment);
+ let result=await c.say('un sangui de pollo');assert.equal(result.mode,'bot');assert.equal(result.cart.items.length,2);assert.equal(result.cart.fulfillment,'retiro');assert.equal(result.cart.delivery_location_id,original.delivery_location_id);assert.equal(result.cart.customer_name,original.customer_name);assert.equal(result.cart.address,original.address);assert.equal(result.cart.payment,original.payment);
  const count=c.aiCalls();result=await c.say('Quiero hablar con alguien del equipo');assert.equal(result.mode,'human');assert.equal(c.aiCalls(),count);
 });
 

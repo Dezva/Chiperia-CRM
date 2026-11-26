@@ -18,7 +18,7 @@ function distance(a,b){
  return row[b.length];
 }
 
-export function correctOrderTokens(tokens, vocabulary, {semantic=false}={}) {
+export function correctOrderTokens(tokens, vocabulary, {semantic=false,fuzzy=false}={}) {
  const words = [...vocabulary].filter(word => word.length >= 4 && /^[a-z]+$/.test(word));
  return tokens.map(token => {
   // Un nombre o sinónimo confirmado siempre gana a cualquier semejanza.
@@ -31,8 +31,18 @@ export function correctOrderTokens(tokens, vocabulary, {semantic=false}={}) {
    const ranked=words.filter(word=>word.slice(0,3)===token.slice(0,3)).map(word=>({word,score:distance(token,word)/Math.max(token.length,word.length)})).filter(candidate=>candidate.score<=.5).sort((a,b)=>a.score-b.score);
    return ranked.length&&(!ranked[1]||ranked[0].score<ranked[1].score)?ranked[0].word:token;
   }
-  if (token.length < 6) return token;
-  const candidates = words.filter(word => oneEdit(token, word));
+  if (token.length < (fuzzy?5:6)) return token;
+  const candidates = token.length>=6?words.filter(word => oneEdit(token, word)):[];
+  if(!candidates.length&&fuzzy){
+   // Errores en nombres largos y abreviaciones con raíz compartida. El matcher
+   // exige otra palabra literal del mismo artículo y descarta todos los empates.
+   const ranked=words.map(word=>({word,edits:distance(token,word)})).filter(x=>{
+    const score=x.edits/Math.max(token.length,x.word.length);
+    return token.length>=7&&x.edits<=2&&score<=.28 ||
+     x.word.length>=8&&x.word.length>=token.length+2&&x.word.slice(0,3)===token.slice(0,3)&&score<=.5;
+   }).sort((a,b)=>a.edits-b.edits);
+   if(ranked.length&&(!ranked[1]||ranked[0].edits<ranked[1].edits))return ranked[0].word;
+  }
   // Dos candidatos cercanos requieren aclaración. No se elige por precio o disponibilidad.
   return candidates.length === 1 ? candidates[0] : token;
  });

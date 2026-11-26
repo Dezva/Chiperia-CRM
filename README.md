@@ -73,3 +73,5 @@ Las pruebas de navegador usan Chromium instalado. En Windows u otra ubicación, 
 Ver [resultados](VALIDACION.md), [auditoría](docs/auditoria.md), [arquitectura](docs/arquitectura.md), [instalación Windows y despliegue](docs/instalacion.md), [Casa Central y pendientes](docs/operacion.md) y [requerimiento original](docs/requerimientos.md).
 
 **Producción requiere un proyecto Supabase nuevo, un sitio Netlify independiente, cuentas autorizadas y autorización explícita para activar WhatsApp o IA.** Esas conexiones no se activaron ni se probaron con credenciales reales en esta entrega.
+
+Mejora de interpretación y modalidades: errores ortográficos contra el catálogo vigente, chipería solo con retiro y delivery exclusivo del buffet. Ver [guía de actualización 018](docs/revisiones/ortografia-y-retiro.md).

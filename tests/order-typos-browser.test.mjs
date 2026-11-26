@@ -20,7 +20,7 @@ test('Navegador: pedido con errores y artículos repetidos, resumen legible en e
   await simulate('chipería');
   // El simulador tiene un campo de una línea. El worker prueba la captura con saltos reales.
   await simulate('Tradicional argolla 2; Sandwidch de verdura 1; Empanada de jamon y queso 5; Sanwi verdura 2');
-  assert.match(await page.locator('.message.outbound .bubble').last().innerText(),/pedido completo/);
+  assert.match(await page.locator('.message.outbound .bubble').last().innerText(),/3 × Sándwich.*Verdura/);
   await simulate('Tradicional argolla 2; Sandwich de verdura 3; Empanada de jamon y queso 5');
   const state=await page.evaluate(()=>JSON.parse(localStorage.getItem('el-viejo-demo-v1')));
   assert.deepEqual(state.conversations[0].cart.items.map(item=>[item.variant_id,item.qty]),[['tradicional-argolla-base',2],['sandwich-verdura',3],['empanada-jamon-y-queso',5]]);

@@ -38,7 +38,8 @@ export function matchCommercial(text,catalog,{context,semantic=false}={}){
  }
  if(catalog.length&&catalog.every(p=>p.service===catalog[0].service)&&['chiperia','buffet'].includes(catalog[0].service)){
   const vocabulary=new Set([...terms.keys()].flatMap(term=>term.split(' ')));
-  const direct=correctOrderTokens(tokens,vocabulary),corrected=semantic?correctOrderTokens(direct,vocabulary,{semantic:true}):direct;
+  const exact=correctOrderTokens(tokens,vocabulary),direct=correctOrderTokens(exact,vocabulary,{fuzzy:true}),corrected=semantic?correctOrderTokens(direct,vocabulary,{semantic:true}):direct;
+  for(let i=0;i<tokens.length;i++)if(exact[i]!==direct[i])weak.add(i);
   for(let i=0;i<tokens.length;i++)if(direct[i]!==corrected[i])weak.add(i);
   tokens.splice(0,tokens.length,...corrected);
  }
@@ -46,12 +47,14 @@ export function matchCommercial(text,catalog,{context,semantic=false}={}){
  const contextual=catalog.filter(p=>pending?.candidate_ids?.includes(p.id)||focus.some(id=>catalog.find(x=>x.id===id)?.name===p.name));
  const used=new Set(),matches=[],ambiguous=[],hits=[];let last=null;
  for(let i=0;i<tokens.length;){let hit=null;
-  const variants=[...contextual];
+  // Una familia explícita nueva desplaza el foco anterior. «Sándwich de pollo»
+  // no debe recuperar la variante Pollo de una empanada del mensaje previo.
+  const variants=contextual.filter(p=>!last||p.name===last.product.name);
   if(last&&tokens.slice(last.end,i).some(t=>['y','e'].includes(t)))variants.push(...catalog.filter(p=>p.name===last.product.name));
   for(let n=segments[i].end-i;n>=1;n--){const term=tokens.slice(i,i+n).join(' '),exact=terms.get(term),short=exact?null:shortNames.get(term),semanticHit=exact||short?null:semanticTerms.get(term),variant=variants.filter(p=>p.variant&&p.variant!=='Base'&&commercialText(p.variant)===term);const products=[...(exact||short||semanticHit||[]),...variant];
    if(products.length){hit={n,term,products:[...new Map(products.map(p=>[p.id,p])).values()],variantOnly:!exact&&!short&&!semanticHit,semanticHit:!!semanticHit};break;}}
   if(hit){const m={product:hit.products[0],products:hit.products,term:hit.term,variantOnly:hit.variantOnly,prefixOnly:!!shortNames.get(hit.term)&&!terms.has(hit.term),segmentEnd:segments[i].end,start:i,end:i+hit.n};
-   if(semantic&&(hit.semanticHit||Array.from({length:hit.n},(_,j)=>i+j).some(j=>weak.has(j))))m.unsafeSemantic=!originalTokens.slice(i,i+hit.n).some((word,j)=>!weak.has(i+j)&&word===tokens[i+j]&&word.length>=4&&!filler.has(word)&&!quantityWords[word]);
+   if((semantic&&hit.semanticHit)||Array.from({length:hit.n},(_,j)=>i+j).some(j=>weak.has(j)))m.unsafeSemantic=!originalTokens.slice(i,i+hit.n).some((word,j)=>!weak.has(i+j)&&word===tokens[i+j]&&word.length>=4&&!filler.has(word)&&!quantityWords[word]);
    hits.push(m);last=m;i+=hit.n;}else{i++;}
  }
  last=null;

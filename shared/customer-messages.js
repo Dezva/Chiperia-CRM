@@ -16,7 +16,7 @@ export function paymentChoice(text,settings){
  return matches.length===1?matches[0]:null;
 }
 
-export function readOnlyCommand(text,cart,catalog){
+export function readOnlyCommand(text,cart,catalog,settings={}){
  const found=matchCommercial(text,catalog,{context:cart?.conversation}),state=messageIntent(text,{hasProducts:!!(found.matches.length||found.ambiguous.length)});
  if(state.kind==='human')return null;
  if(/^(?:pago|pagare|voy a pagar|quiero pagar|prefiero pagar)\b/.test(commercialText(text)))return {intent:'info',topic:'payments'};
@@ -25,21 +25,26 @@ export function readOnlyCommand(text,cart,catalog){
   return {intent:'social',message:/gracias/.test(commercialText(text))?'¡Gracias a vos! Si necesitás algo más, seguimos por acá.':'De acuerdo. Cuando quieras, seguimos con tu pedido.'};
  }
  if(state.kind==='query'&&state.topic==='status')return null;
+ const mentioned=state.kind==='query'&&['buffet','chiperia'].find(service=>new RegExp('\\b'+service+'\\b').test(commercialText(text)));
+ if(mentioned&&cart?.service&&mentioned!==cart.service)return {intent:'cross_service_query',topic:state.topic,service:mentioned};
+
+ if((state.topic==='fulfillment'||state.topic==='price'&&/\b(?:delivery|envio|domicilio)\b/.test(commercialText(text)))&&cart?.service&&deliveryMode(settings,cart.service)==='disabled')return {intent:'clarify',message:cart.service==='chiperia'?'La chipería trabaja solo con retiro en el local; el delivery corresponde al buffet. Tu pedido sigue igual.':'Este servicio no tiene delivery disponible. Podés retirar en el local. Tu pedido sigue igual.'};
+ if(cart?.service==='chiperia'&&cart.items?.length&&cart.fulfillment==='delivery'&&deliveryQueryRequested(text)&&!(state.topic==='location'&&/\b(?:donde|ubicados?|local)\b/.test(commercialText(text))))return {intent:'clarify',message:'La chipería trabaja solo con retiro en el local; el delivery corresponde al buffet. Conservamos tus productos. Escribí RETIRO para continuar.'};
  const delivery=deliveryStatusCommand(text,cart);
  if(delivery&&!(state.kind==='query'&&state.topic==='location'))return delivery;
  if(!/[?¿]/.test(String(text))&&/^(?:referencia\b|direccion\s*:)/.test(categoryKey(text))&&!explicitReferenceCommand(text,cart))return {intent:'clarify',message:'Para adjuntar esa referencia, primero prepará el pedido para delivery. Tu borrador sigue guardado.'};
  if(!cart?.items?.length&&deliveryQueryRequested(text)&&!(state.kind==='query'&&state.topic==='location'))return null;
  if(state.kind!=='query')return null;
- const mentioned=['buffet','chiperia'].find(service=>new RegExp('\\b'+service+'\\b').test(commercialText(text)));
- if(mentioned&&cart?.service&&mentioned!==cart.service)return {intent:'cross_service_query',topic:state.topic,service:mentioned};
  if(['general','price','availability'].includes(state.topic)&&!found.matches.length&&catalog.some(product=>product.category&&(' '+commercialText(text)+' ').includes(' '+commercialText(product.category)+' ')))return null;
  if(['status','menu'].includes(state.topic))return null;
  if(['hours','payments','location'].includes(state.topic))return {intent:'info',topic:state.topic};
+
  if(state.topic==='fulfillment')return {intent:'clarify',message:'Podés solicitar retiro o delivery según la disponibilidad del local. ¿Preferís retirar en el local o pedir delivery? Tu pedido sigue igual.'};
  if(state.topic==='general')return {intent:'clarify',message:'No entendí bien la consulta. Tu pedido sigue guardado. ¿Podés explicármela de otra manera o preferís hablar con el equipo?'};
  if(!cart?.service)return {intent:'clarify',message:'¿Querés consultar el buffet o la chipería? Elegí un servicio para mostrarte sus opciones.'};
  if(state.topic==='price'&&cart?.service==='buffet')return null;
  if(state.topic==='price'&&/\b(?:delivery|envio|domicilio)\b/.test(commercialText(text))&&!found.matches.length)return {intent:'clarify',message:'El costo de envío lo confirma el equipo después de revisar la ubicación. Tu pedido sigue igual.'};
+ if(found.matches.some(m=>m.unsafeSemantic))return {intent:'clarify',message:'No identifiqué el producto con suficiente seguridad. Escribí su nombre y variedad, o MENÚ para ver las opciones. Tu pedido sigue igual.'};
  const unknown=found.unknown.filter(word=>!queryGrammar.has(word)&&!/^\d+$/.test(word));
  if(unknown.length)return {intent:'clarify',message:(cart.service==='buffet'&&found.matches.some(m=>m.prefixOnly)?'No identifiqué ese plato completo: no encontré «':'No encontré «')+unknown.join(' ').slice(0,140)+'» en las opciones vigentes de este servicio. Escribí MENÚ para consultarlas. Tu pedido sigue igual.'};
  if(found.ambiguous.length)return {intent:'clarify',message:'¿Qué variedad querés consultar? '+[...new Set(found.ambiguous.flatMap(m=>m.products.map(productName)))].join(', ')+'. No cambié tu pedido.'};
@@ -58,5 +63,5 @@ export function informationReply(command,cart,settings){
  if(!hours)return '¿Querés consultar los horarios del buffet o de la chipería?';
  const days=WEEK_DAYS.filter(day=>hours.days.includes(day.value)).map(day=>day.label).join(', ');
  const delivery=deliveryMode(settings,cart.service);
- return 'Atención: '+days+', '+hours.open+'–'+hours.close+'.'+(delivery==='disabled'?' Delivery deshabilitado para este servicio.':delivery==='pending'?' El horario de delivery debe coordinarse con el equipo.':' Delivery: '+hours.delivery_open+'–'+hours.delivery_close+'.');
+ return 'Atención: '+days+', '+hours.open+'–'+hours.close+'.'+(delivery==='disabled'?(cart.service==='chiperia'?' Chipería: solo retiro en el local. El delivery corresponde al buffet.':' Delivery deshabilitado para este servicio.'):delivery==='pending'?' El horario de delivery debe coordinarse con el equipo.':' Delivery: '+hours.delivery_open+'–'+hours.delivery_close+'.');
 }

@@ -10,6 +10,7 @@ export function deliveryStatusCommand(text,cart){
  return {intent:'clarify',message:cart.delivery_location_id?deliveryReadyPrompt:'Todavía falta una ubicación puntual válida de WhatsApp para este delivery. Enviá el punto desde Adjuntar → Ubicación. La referencia escrita es opcional.'};
 }
 export function registeredDeliveryCommand(order,cart){
+ if(order?.service==='chiperia'&&order.fulfillment!=='delivery'||!order&&cart.service==='chiperia')return {intent:'clarify',message:'La chipería trabaja solo con retiro en el local; el delivery corresponde al buffet. No necesitás enviar una ubicación para retirar.'};
  if(cart.delivery_location_id)return {intent:'clarify',message:'Recibí tu nueva ubicación. Decime los productos y cantidades para preparar la solicitud.'};
  if(order&&['delivered','cancelled','rejected'].includes(order.status))return {intent:'clarify',message:'La última solicitud #'+order.number+' ya está finalizada. Su ubicación pertenece a ese pedido anterior. Para preparar otro delivery, decime los productos y compartí un nuevo punto.'};
  if(order?.fulfillment==='delivery')return {intent:'clarify',message:order.delivery_location_id?'Tu solicitud #'+order.number+' ya tiene la ubicación asociada. No hace falta reenviarla ni agregar una referencia. El equipo gestiona su entrega.':'La solicitud #'+order.number+' todavía necesita un punto válido de WhatsApp para el delivery. Enviá el punto desde Adjuntar → Ubicación.'};

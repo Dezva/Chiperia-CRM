@@ -44,6 +44,7 @@ Crear un proyecto **nuevo** exclusivo para El Viejo Villeta. Ejecutar con SQL Ed
 13. `database/015_historial_seguro.sql`
 14. `database/016_referencia_delivery.sql`
 15. `database/017_delivery_y_pedidos_v17.sql`
+16. `database/018_delivery_solo_buffet.sql`
 
 003 está reservado; no carga productos del bar original. 004 es una plantilla para autorizar usuarios, no una migración automática. Desactivar registro público, crear/invitar la primera cuenta en Supabase Auth y autorizarla con 004 cambiando el correo, nombre y rol a `admin`. Posteriores cuentas Auth se autorizan desde Usuarios del CRM. Configurar Site URL y Redirect URLs; completar contraseña desde los mecanismos de Auth. No hay pantalla propia para invitaciones/restablecimiento.
 

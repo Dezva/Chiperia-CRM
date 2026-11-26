@@ -19,10 +19,10 @@ const expected=[item('tradicional-argolla-base',2),item('sandwich-verdura',3),it
 test('Interpretación del proveedor: sanwich, sangui y sanwi contra catálogo actual, sin tabla de equivalencias',async t=>{
  t.after(mockEnvironment());let response;
  t.mock.method(globalThis,'fetch',async url=>url.includes('viejo_ai_usage')?Response.json(null):Response.json({status:'completed',output_text:JSON.stringify(response)}));
- for(const [text,items] of [['un sangui de pollo',[item('sandwich-milanesa-de-pollo')]],['dos sanwich de pollo',[item('sandwich-milanesa-de-pollo',2)]],['un sanguche de pollo',[item('sandwich-milanesa-de-pollo')]],['un sanwi de verdura',[item('sandwich-verdura')]], [screenshot,expected]]){
+ for(const [text,items] of [['un sangui de pollo',[item('sandwich-milanesa-de-pollo')]],['dos sanwich de pollo',[item('sandwich-milanesa-de-pollo',2)]],['un sanguche de pollo',[item('sandwich-milanesa-de-pollo')]],['un sanwi de verdura',[item('sandwich-verdura')]],['dos sanwis de verdura',[item('sandwich-verdura',2)]], [screenshot,expected]]){
   response=output(items);const command=await interpret(text,cart,catalog,defaults);
   assert.equal(command.intent,'update_cart',text);assert.deepEqual(command.items,items,text);
-  const result=reduceOrder({text,cart,catalog,command});assert.equal(result.kind,'reply');assert.equal(result.cart.items.length,items.length);assert.match(result.reply,/¿Vas a retirar/);
+  const result=reduceOrder({text,cart,catalog,command});assert.equal(result.kind,'reply');assert.equal(result.cart.items.length,items.length);assert.match(result.reply,/retirar en el local/);
  }
  const product={id:'nuevo-pavo',name:'Baguette',variant:'Pavo',price:7123,available:true,active:true,service:'chiperia',aliases:[]};
  response=output([item(product.id,2)]);
