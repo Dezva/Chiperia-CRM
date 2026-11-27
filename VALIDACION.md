@@ -1,4 +1,10 @@
-> Resultado vigente: [V1.7 delivery, pedidos y finanzas](docs/revisiones/v1.7-pedidos-finanzas.md), 132 pruebas: 130 aprobadas, 0 fallidas y 2 omisiones heredadas. PostgreSQL local, API/worker y Chromium en escritorio/móvil; proveedores simulados.
+> Resultado vigente: [autenticación ASCII del worker](docs/revisiones/worker-auth-ascii.md). Build correcto; 161 pruebas: 159 aprobadas, 0 fallidas y 2 omisiones heredadas. Incluye webhook → dispatch → worker → PostgreSQL con secreto Unicode y WhatsApp simulado.
+
+> Resultado anterior: [retiro y delivery naturales](docs/revisiones/retiro-natural.md). Build correcto; 155 pruebas: 153 aprobadas, 0 fallidas y 2 omisiones heredadas. Comprobación final específica/navegador: 5/5 aprobadas.
+
+> Resultado anterior del PR #1: [buffet, tarifas y pedidos sin regresión de chipería](docs/revisiones/buffet-flujo-tarifas.md). Build correcto; 145 pruebas: 143 aprobadas, 0 fallidas y 2 omisiones heredadas. Además, 13/13 específicas aprobadas; proveedores simulados y PostgreSQL local.
+
+> Resultado anterior: [V1.7 delivery, pedidos y finanzas](docs/revisiones/v1.7-pedidos-finanzas.md), 132 pruebas: 130 aprobadas, 0 fallidas y 2 omisiones heredadas. PostgreSQL local, API/worker y Chromium en escritorio/móvil; proveedores simulados.
 
 > Resultado anterior: [V1.6.1 delivery, cantidades y estado del pedido](docs/revisiones/v1.6.1-delivery.md), 126 pruebas: 124 aprobadas, 0 fallidas y 2 omisiones heredadas. Además, 5/5 regresiones reforzadas PostgreSQL/worker y unitarias.
 

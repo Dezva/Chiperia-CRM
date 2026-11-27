@@ -5,7 +5,7 @@ import {localDate,reduceOrder,activeCatalog,emptyCart} from '../shared/viejo-eng
 const publish=(items,day=localDate())=>({id:uid(),day,status:'published',reviewed:true,items});
 const dish={id:'buffet-fixture',name:'Plato ficticio de prueba',category_id:'guarniciones',available:true};
 
-test('V1.1 SQL + worker: deliveries consecutivos, pausa, reactivación, A/B, cancelación y cambio de servicio',async t=>{
+test('V1.1 SQL + worker: retiros/deliveries consecutivos, pausa, reactivación, A/B, cancelación y cambio de servicio',async t=>{
  const ctx=await databaseV11(),restore=mockEnvironment(),original=globalThis.fetch;const {db,rpc,one,staff,admin}=ctx;
  try{
   await db.exec(await readFile(new URL('../database/009_v11_fiabilidad.sql',import.meta.url),'utf8'));
@@ -17,22 +17,22 @@ test('V1.1 SQL + worker: deliveries consecutivos, pausa, reactivación, A/B, can
   const bridge=restBridge(ctx);globalThis.fetch=bridge.fetch;
   let seq=0;
   const inbound=async(wa,text)=>{await rpc('guarni_ingest',['wamid.v11.'+uid(),wa,'Prueba',text]);await runWorker();};
-  async function prepare(chat,service){const items=service==='buffet'?[{variant_id:dish.id,qty:1}]:[{variant_id:'tradicional-base',qty:3}];const q=await rpc('viejo_quote',[service,items]);await db.query('update guarni_conversations set cart=$1 where id=$2',[{...emptyCart('Prueba',service),...q,fulfillment:'delivery',quoted:true,address:'Referencia ficticia'},chat]);}
+  async function prepare(chat,service){const items=service==='buffet'?[{variant_id:dish.id,qty:1}]:[{variant_id:'tradicional-base',qty:3}];const q=await rpc('viejo_quote',[service,items]);await db.query('update guarni_conversations set cart=$1 where id=$2',[{...emptyCart('Prueba',service),...q,fulfillment:service==='buffet'?'delivery':'retiro',quoted:true,address:'Referencia ficticia'},chat]);}
   async function location(wa,n){await rpc('guarni_ingest_location',['wamid.point.'+uid(),wa,'Prueba',{latitude:-25-n/100,longitude:-57},'location']);await runWorker();return (await one('select draft_location_id from guarni_conversations where wa_id=$1',[wa])).draft_location_id;}
   for(const [first,second] of [['buffet','buffet'],['buffet','chiperia'],['chiperia','buffet'],['chiperia','chiperia']])await t.test(first+' → '+second,async()=>{
    const wa='595000010'+String(++seq).padStart(3,'0');await inbound(wa,'hola');const chat=(await one('select id from guarni_conversations where wa_id=$1',[wa])).id;
-   await prepare(chat,first);const a=await location(wa,seq);assert.ok(a);
+   await prepare(chat,first);const a=await location(wa,seq);assert.equal(!!a,first==='buffet');
    await inbound(wa,'CONFIRMAR PEDIDO');let orders=(await db.query('select * from guarni_orders where conversation_id=$1 order by number',[chat])).rows;
    assert.equal(orders.length,1);assert.equal(orders[0].delivery_location_id,a);
    const c=await one('select * from guarni_conversations where id=$1',[chat]);assert.equal(c.draft_location_id,null);assert.deepEqual(c.cart.items,[]);assert.equal(c.cart.delivery_location_id,null);
    const saved=bridge.calls.filter(c=>c.path.endsWith('guarni_finish')&&c.body.p_kind==='submit').at(-1).body;
    assert.equal((await rpc('guarni_finish',Object.values(saved))).duplicate,true);
    await staff('take',{id:chat});await staff('release',{id:chat});
-   await prepare(chat,second);await inbound(wa,'CONFIRMAR PEDIDO');assert.equal((await one('select count(*)::int n from guarni_orders where conversation_id=$1',[chat])).n,1);
-   const b=await location(wa,seq+10);assert.notEqual(b,a);await inbound(wa,'CONFIRMAR PEDIDO');
+   await prepare(chat,second);if(second==='buffet'){await inbound(wa,'CONFIRMAR PEDIDO');assert.equal((await one('select count(*)::int n from guarni_orders where conversation_id=$1',[chat])).n,1);}
+   const b=await location(wa,seq+10);assert.equal(!!b,second==='buffet');if(a&&b)assert.notEqual(b,a);await inbound(wa,'CONFIRMAR PEDIDO');
    orders=(await db.query('select * from guarni_orders where conversation_id=$1 order by number',[chat])).rows;
    assert.equal(orders.length,2);assert.equal(orders[0].delivery_location_id,a);assert.equal(orders[1].delivery_location_id,b);
-   assert.equal((await one('select count(*)::int n from guarni_order_locations where order_id in ($1,$2)',orders.map(o=>o.id))).n,2);
+   assert.equal((await one('select count(*)::int n from guarni_order_locations where order_id in ($1,$2)',orders.map(o=>o.id))).n,Number(first==='buffet')+Number(second==='buffet'));
    if(first!==second)assert.equal(orders[0].group_id,orders[1].group_id);
    await staff('take',{id:chat});await staff('release',{id:chat});await prepare(chat,'chiperia');await location(wa,seq+20);
    await inbound(wa,'retiro');assert.equal((await one('select draft_location_id from guarni_conversations where id=$1',[chat])).draft_location_id,null);

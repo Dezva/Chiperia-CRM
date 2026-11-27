@@ -1,7 +1,7 @@
 import {PGlite} from '@electric-sql/pglite';
 import {readFile} from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
-export async function databaseV11({categories=true,settings=true,individual=true,history=true,delivery=true,v17=false}={}){
+export async function databaseV11({categories=true,settings=true,individual=true,history=true,delivery=true,v17=false,pickup=false}={}){
  const db=new PGlite({initialMemory:128*1024*1024});
  await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create table auth.users(id uuid primary key,email text);create function auth.uid() returns uuid language sql as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema auth to authenticated;`);
  for(const name of ['001_base_crm','002_guarnipitan','005_eliminacion_admin','006_ubicaciones_delivery','007_el_viejo','008_catalogo_el_viejo','009_v11_fiabilidad'])await db.exec(await readFile(new URL('../database/'+name+'.sql',import.meta.url),'utf8'));
@@ -13,6 +13,7 @@ export async function databaseV11({categories=true,settings=true,individual=true
  if(categories&&settings&&individual&&history)await db.exec(await readFile(new URL('../database/015_historial_seguro.sql',import.meta.url),'utf8'));
  if(categories&&settings&&individual&&history&&delivery)await db.exec(await readFile(new URL('../database/016_referencia_delivery.sql',import.meta.url),'utf8'));
  if(v17)await db.exec(await readFile(new URL('../database/017_delivery_y_pedidos_v17.sql',import.meta.url),'utf8'));
+ if(pickup)await db.exec(await readFile(new URL('../database/018_delivery_solo_buffet.sql',import.meta.url),'utf8'));
  const admin=randomUUID(),editor=randomUUID(),employee=randomUUID();
  for(const [id,role,menu] of [[admin,'admin',false],[editor,'member',true],[employee,'member',false]]){
   await db.query('insert into auth.users values($1,$2)',[id,id+'@example.test']);
@@ -46,7 +47,13 @@ export function restBridge(context,{actor=context.admin,onAI}={}){
    if(table==='viejo_ai_usage'&&options.method==='POST'){await db.query('insert into viejo_ai_usage(id,model,operation,input_tokens,output_tokens,total_tokens,context_chars,created_at) values($1,$2,$3,$4,$5,$6,$7,$8)',[body.id,body.model,body.operation,body.input_tokens??null,body.output_tokens??null,body.total_tokens??null,body.context_chars??null,body.created_at]);return Response.json(null);}
    let select=url.searchParams.get('select')||'*';if(!/^[a-z_,*]+$/.test(select))throw Error('SELECT no soportado en prueba');
    const args=[],where=[];
-   for(const [key,value] of url.searchParams){if(['select','order','limit'].includes(key))continue;if(!/^[a-z_]+$/.test(key)||!value.startsWith('eq.'))throw Error('Filtro no soportado: '+key);args.push(value.slice(3));where.push(key+'=$'+args.length);}
+   for(const [key,value] of url.searchParams){
+    if(['select','order','limit'].includes(key))continue;
+    if(!/^[a-z_]+$/.test(key))throw Error('Filtro no soportado: '+key);
+    if(value.startsWith('eq.')){args.push(value.slice(3));where.push(key+'=$'+args.length);}
+    else if(/^in\.\([a-z_]+(?:,[a-z_]+)*\)$/.test(value)){const markers=value.slice(4,-1).split(',').map(item=>{args.push(item);return '$'+args.length;});where.push(key+' in ('+markers.join(',')+')');}
+    else throw Error('Filtro no soportado: '+key);
+   }
    const sql=`select ${select} from public.${table}`+(where.length?' where '+where.join(' and '):'');
    const rows=(await db.query(sql,args)).rows;
    if(table==='viejo_menus')for(const row of rows)if(row.day)row.day=(row.day instanceof Date?row.day.toISOString():String(row.day)).slice(0,10);

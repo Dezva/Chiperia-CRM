@@ -31,6 +31,7 @@ export function migrateCatalogDemo(d){
 export function withCategories(products,categories){return products.map(p=>({...p,category:categories.find(c=>c.id===p.category_id)?.name||p.category,category_active:categories.find(c=>c.id===p.category_id)?.active??true}));}
 // Plurales regulares, no semejanzas gastronómicas ni coincidencias parciales.
 export function singularWord(word){
+ if(word.length>4&&/(?:ch|sh)s$/.test(word))return word.slice(0,-1);
  if(['tres','seis','gracias','mas','lunes','martes','miercoles','jueves','viernes'].includes(word))return word;
  if(word.length>4&&/(?:[lrn]es|ches)$/.test(word))return word.slice(0,-2);
  return word.length>3&&/[aeiou]s$/.test(word)?word.slice(0,-1):word;

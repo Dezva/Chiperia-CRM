@@ -155,7 +155,7 @@ test('Worker: las respuestas de modalidad conservan productos sin IA y los fallo
    if(endpoint.includes('crm_clients?'))return Response.json([{name:'Ana'}]);
    assert.match(endpoint,/guarni_finish$/);finished=JSON.parse(options.body);return Response.json({ok:true});
   };
-  await runWorker();assert.equal(finished.p_cart.items.length,1);assert.equal(finished.p_cart.items[0].qty,2);assert.equal(finished.p_cart.fulfillment,'delivery');assert.match(finished.p_body,/ubicación puntual/);
+  await runWorker();assert.equal(finished.p_cart.items.length,1);assert.equal(finished.p_cart.items[0].qty,2);assert.equal(finished.p_cart.fulfillment,'a_coordinar');assert.match(finished.p_body,/solo con retiro/);
   claimed=false;let retried=false;
   globalThis.fetch=async(endpoint,options={})=>{
    if(endpoint.includes('guarni_settings?'))return Response.json([{config:{bot_enabled:true}}]);

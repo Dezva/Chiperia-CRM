@@ -4,6 +4,7 @@ export const PAYMENT_METHODS=Object.freeze([{value:'Efectivo',label:'Efectivo'},
 export const DELIVERY_MODES=Object.freeze(['scheduled','pending','disabled']);
 const time=value=>typeof value==='string'&&/^([01]\d|2[0-3]):[0-5]\d$/.test(value);
 export function deliveryMode(config,service){
+ if(service==='chiperia')return 'disabled';
  const s=config.schedules?.[service]||{};
  if(DELIVERY_MODES.includes(s.delivery_mode))return s.delivery_mode;
  if(Array.isArray(config.fulfillment_modes)&&!config.fulfillment_modes.includes('delivery'))return 'disabled';
@@ -12,6 +13,8 @@ export function deliveryMode(config,service){
 export function normalizeSettings(config){
  const c=structuredClone(config);c.schedules??={};
  for(const service of ['buffet','chiperia'])if(c.schedules[service])c.schedules[service].delivery_mode=deliveryMode(config,service);
+ if(Array.isArray(c.fulfillment_modes)&&deliveryMode(config,'buffet')==='disabled')c.fulfillment_modes=c.fulfillment_modes.filter(mode=>mode!=='delivery');
+ if(c.schedules.chiperia){c.schedules.chiperia.delivery_open=null;c.schedules.chiperia.delivery_close=null;}
  return c;
 }
 export function validateSettings(c){
@@ -29,6 +32,7 @@ export function validateSettings(c){
   if(!time(s.open)||!time(s.close))throw Error(label+': completá los horarios de apertura y cierre.');
   if(s.open>=s.close)throw Error(label+': el cierre debe ser posterior a la apertura.');
   if(!DELIVERY_MODES.includes(s.delivery_mode))throw Error(label+': elegí cómo funciona el delivery. Actualizá la pantalla si falta esta opción.');
+  if(service==='chiperia'&&s.delivery_mode!=='disabled')throw Error('La chipería trabaja solo con retiro en el local. El delivery corresponde al buffet.');
   if(s.delivery_mode==='scheduled'){
    if(!time(s.delivery_open)||!time(s.delivery_close))throw Error(label+': completá el inicio y el fin del delivery.');
    if(s.delivery_open>=s.delivery_close)throw Error(label+': el fin del delivery debe ser posterior al inicio.');

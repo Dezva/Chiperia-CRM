@@ -44,6 +44,7 @@ Crear un proyecto **nuevo** exclusivo para El Viejo Villeta. Ejecutar con SQL Ed
 13. `database/015_historial_seguro.sql`
 14. `database/016_referencia_delivery.sql`
 15. `database/017_delivery_y_pedidos_v17.sql`
+16. `database/018_delivery_solo_buffet.sql`
 
 003 está reservado; no carga productos del bar original. 004 es una plantilla para autorizar usuarios, no una migración automática. Desactivar registro público, crear/invitar la primera cuenta en Supabase Auth y autorizarla con 004 cambiando el correo, nombre y rol a `admin`. Posteriores cuentas Auth se autorizan desde Usuarios del CRM. Configurar Site URL y Redirect URLs; completar contraseña desde los mecanismos de Auth. No hay pantalla propia para invitaciones/restablecimiento.
 
@@ -57,7 +58,7 @@ Conectar un sitio nuevo a la rama de este repositorio. `netlify.toml` define bui
 |---|---|
 | PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_KEY | Build; URL y clave **sb_publishable_**. Únicos datos de conexión públicos. |
 | SUPABASE_URL, SUPABASE_SECRET_KEY | Functions; proyecto independiente y clave secreta de backend. |
-| WORKER_SECRET | Cadena aleatoria larga y exclusiva para despachar trabajo. |
+| WORKER_SECRET | Cadena aleatoria larga y exclusiva para despachar trabajo. Debe coincidir entre funciones en Production; el transporte usa HMAC en ASCII. |
 | BOT_ENABLED | `false` hasta autorización; además Configuración → Habilitar asistente debe estar activo. |
 | WHATSAPP_SEND_ENABLED | `false` hasta autorización; protege también mensajes humanos y notificaciones de pedidos. |
 | AI_IMAGE_ENABLED | `false` hasta autorizar envío de fotos al proveedor. |
@@ -106,3 +107,27 @@ Desde V1.6 aplicar únicamente 016 antes del código compatible de la misma rama
 ## V1.7: pedidos, delivery sin referencia y finanzas
 
 Desde una base en 015, aplicar **016 si falta y después 017**, antes de un único despliegue manual del código compatible. Seguir [la guía V1.7](revisiones/v1.7-pedidos-finanzas.md) para comprobaciones, recuperación ante fallos y límites históricos. No volver a ejecutar migraciones anteriores. No se eliminan pedidos al instalar.
+
+## Buffet: consultas, pedidos y tarifas vigentes
+
+La actualización del [PR #1](https://github.com/Dezva/Chiperia-CRM/pull/1), en `fix/tarifas-buffet-sin-regresion-chiperia`, no añade SQL para una base en V1.7. Revisar [la guía de actualización](revisiones/buffet-flujo-tarifas.md) y realizar un único despliegue manual del commit aprobado, conservando conexiones y tarifas del CRM.
+
+## Autenticación del worker y contextos Netlify
+
+La [corrección de autenticación ASCII](revisiones/worker-auth-ascii.md) evita enviar `WORKER_SECRET` directamente como encabezado. No requiere SQL ni rotar un secreto existente por contener Unicode. Generar un deploy de Production del nuevo commit y comprobar `workerAuth: "hmac-sha256-v1"` en health; publicar un preview anterior no incorpora esta corrección.
+
+## Publicación automática autorizada
+
+El responsable autoriza ahora disparar el despliegue automático de los últimos cambios de `fix/tarifas-buffet-sin-regresion-chiperia` y confirma que auto publish ya está activo en Netlify. Esta autorización sustituye la pausa de publicación de la etapa de preparación.
+
+El commit de activación se sube sin `[skip netlify]` y contiene como antecedente el pulido completo `4ba610c64991c0612f58de64b9076b9be0d7fc45`. Sus 186 pruebas terminaron con 184 aprobadas y dos omisiones heredadas; ambas validaciones de GitHub Actions aprobaron ese commit. No requiere SQL nuevo ni cambios de variables de entorno.
+
+`netlify.toml` establece `build.ignore = "exit 1"` para que Netlify continúe el build al recibir el push. No omite validaciones ni altera credenciales. La rama de producción del sitio conectado a **Dezva/Chiperia-CRM** debe ser exactamente `fix/tarifas-buffet-sin-regresion-chiperia`.
+
+El push permite que la integración Git construya el sitio y sus funciones y que auto publish publique el resultado según la configuración existente del sitio. No se modifican esos ajustes externos desde el repositorio. El workflow de GitHub sigue ejecutando únicamente build y pruebas.
+
+Comprobar en el resultado Where: Production y el commit más reciente. Las variables siguen siendo las del contexto Production; no se modifican secretos ni credenciales desde el repositorio. Para verificar la corrección del worker, health debe mostrar `workerAuth: "hmac-sha256-v1"` y dispatch debe registrar `worker_started` tras un mensaje nuevo.
+
+## Lenguaje cotidiano y confirmación corta
+
+La revisión posterior a `b508e47` reúne las mejoras de interpretación, confirmación corta y primer pedido directo en una publicación conjunta. Ver [guía y orden de actualización 019](revisiones/lenguaje-cotidiano.md). La 019 solo cambia un aviso y debe aplicarse después de publicar el código que acepta CONFIRMAR. No repetir 017 ni 018.

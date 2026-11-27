@@ -12,6 +12,20 @@ V1.3/V1.4 añade catálogo comercial por producto, categorías editables, sinón
 
 V1.5 presenta un inicio de sesión independiente con la identidad de El Viejo. [Cambios, capturas, pruebas y actualización del sitio Netlify](docs/revisiones/v1.5-login.md). No requiere migraciones.
 
+Despliegue automático autorizado: el nuevo commit incluye el pulido completo del chatbot y permite el build de Netlify sin marca de omisión. [Política actual de publicación](docs/instalacion.md#publicación-automática-autorizada).
+
+Pulido integral: consultas y mensajes sociales conservan el borrador; las compras inválidas se reinician y los errores técnicos se recuperan sin perder el pedido. [Comportamiento, validación y despliegue final](docs/revisiones/pulido-integral.md).
+
+Pedidos con errores de escritura: reconoce «sandwidch» y «sanwi», cantidades por línea y productos repetidos sin perder unidades. [Reglas, pruebas y actualización](docs/revisiones/pedidos-con-errores.md).
+
+Pedido completo: si un artículo no se identifica o no está disponible, reinicia el borrador y pide repetir toda la lista. Interpreta expresiones naturales con el catálogo vigente y validación del servidor, sin una tabla fija de abreviaciones. [Flujo actualizado y pruebas](docs/revisiones/pedido-completo.md).
+
+Autenticación del worker en ASCII: corrige el descarte de `x-worker-secret` con valores Unicode y añade logs de despacho. [Diagnóstico y despliegue en Production](docs/revisiones/worker-auth-ascii.md).
+
+Retiro natural: reconoce «voy a retirar» y aclaraciones sobre la entrega, conservando el pedido y el subtotal. [Corrección, pruebas y actualización](docs/revisiones/retiro-natural.md).
+
+Mejora del buffet en el [PR #1](https://github.com/Dezva/Chiperia-CRM/pull/1): tarifas vigentes por kilo, consultas y pedidos diferenciados, observaciones por plato y carritos separados de chipería. [Guía y validación](docs/revisiones/buffet-flujo-tarifas.md).
+
 V1.7 hace opcional la referencia del delivery, reorganiza pedidos, separa entrega y cobro y añade períodos financieros y eliminación administrativa segura. [Guía, migraciones 016 → 017, pruebas y capturas](docs/revisiones/v1.7-pedidos-finanzas.md).
 
 V1.6.1 corrige el flujo de ubicación/referencia del delivery, las cantidades repetidas y las consultas sobre el estado del pedido. [Guía, migración 016 y pruebas](docs/revisiones/v1.6.1-delivery.md).
@@ -59,3 +73,5 @@ Las pruebas de navegador usan Chromium instalado. En Windows u otra ubicación, 
 Ver [resultados](VALIDACION.md), [auditoría](docs/auditoria.md), [arquitectura](docs/arquitectura.md), [instalación Windows y despliegue](docs/instalacion.md), [Casa Central y pendientes](docs/operacion.md) y [requerimiento original](docs/requerimientos.md).
 
 **Producción requiere un proyecto Supabase nuevo, un sitio Netlify independiente, cuentas autorizadas y autorización explícita para activar WhatsApp o IA.** Esas conexiones no se activaron ni se probaron con credenciales reales en esta entrega.
+
+Mejora de interpretación y modalidades: errores ortográficos contra el catálogo vigente, chipería solo con retiro y delivery exclusivo del buffet. Ver [guía de actualización 018](docs/revisiones/ortografia-y-retiro.md).

@@ -1,11 +1,18 @@
+import {cancellationIntent} from '../../shared/cancellation.js';
+import {withoutGreeting} from '../../shared/social-language.js';
+import {mediaDisposition} from './whatsapp-media.mjs';
+import {referencePriceRequest} from '../../shared/reference-prices.js';
 import {orderStatusRequested,registeredOrderCommand} from '../../shared/order-status.js';
 import {hydrateDeliveryLocation,deliveryQueryRequested,registeredDeliveryCommand} from '../../shared/delivery-context.js';
-import {deterministicConversation} from '../../shared/conversation-context.js';
+import {deterministicConversation,fulfillmentCommand} from '../../shared/conversation-context.js';
+import {readOnlyCommand,paymentChoice} from '../../shared/customer-messages.js';
+import {humanRequested} from '../../shared/message-intent.js';
+import {initialOrder} from '../../shared/initial-order.js';
 import {interpret} from './conversation.mjs';
 import {withCategories} from '../../shared/catalog.js';
 import {randomUUID} from 'node:crypto';
 import {env,db,rpc} from './platform.mjs';
-import {reduceOrder,emptyCart,isConfirmation,fulfillmentChoice,serviceChoice,activeCatalog,defaults,localDate} from '../../shared/viejo-engine.js';
+import {reduceOrder,emptyCart,isConfirmation,serviceChoice,activeCatalog,defaults,localDate} from '../../shared/viejo-engine.js';
 async function send(job,token){
  const m=job.message,c=job.conversation;
  // Última comprobación después de la reserva; una toma humana invalida respuestas del bot.
@@ -32,35 +39,57 @@ export async function runWorker({budgetMs=45000}={}){
   if(job.kind==='send'){await send(job,token);count++;continue;}
   const c=job.conversation;
   try{
+   const media=mediaDisposition(job.message);
+   if(media==='ignore'){
+    await rpc('guarni_finish',{p_token:token,p_job:job.job.id,p_revision:c.revision,p_cart:c.cart,p_body:'',p_kind:'ignore'});
+    count++;
+    continue;
+   }
    const settings=await db('/rest/v1/guarni_settings?id=eq.true');
-   const config={...defaults,...settings[0]?.config};
+   const config={...defaults,...settings[0]?.config,reference_prices:settings[0]?.config?.reference_prices||{}};
    const botEnabled=env('BOT_ENABLED')==='true'&&config.bot_enabled===true;
    if(['location','invalid_location','live_location'].includes(job.message.content_type)){
-    await rpc('guarni_process_location',{p_token:token,p_job:job.job.id,p_reply_enabled:botEnabled});
+    let pickupOnly=c.cart?.service==='chiperia';
+    if(pickupOnly&&!c.cart.items?.length){
+     const orders=await db('/rest/v1/guarni_orders?conversation_id=eq.'+c.id+'&select=service,fulfillment,status');
+     pickupOnly=!orders.some(o=>o.fulfillment==='delivery'&&['accepted','preparing','ready','out_for_delivery',...(o.service==='buffet'?['pending']:[])].includes(o.status));
+    }
+    if(pickupOnly&&c.mode==='bot'&&botEnabled){
+     await rpc('guarni_finish',{p_token:token,p_job:job.job.id,p_revision:c.revision,p_cart:{...c.cart,fulfillment:c.cart.fulfillment==='delivery'?'a_coordinar':c.cart.fulfillment,delivery_location_id:null},p_body:'La chipería trabaja solo con retiro en el local; el delivery corresponde al buffet. No necesitás enviar una ubicación para retirar. Conservamos tus productos.',p_kind:'reply'});
+    }else await rpc('guarni_process_location',{p_token:token,p_job:job.job.id,p_reply_enabled:botEnabled});
     count++;
     continue;
    }
    let result;
    if(c.mode==='human'||!botEnabled)result={kind:'ignore',cart:c.cart,reply:''};
    else if(/^\[Contenido (location|live_location) recibido:/.test(job.message.body))result={kind:'reply',cart:c.cart,reply:'Para adjuntar la ubicación a tu pedido, enviame tu ubicación actual puntual desde WhatsApp 📍.'};
-   else if(job.message.body.startsWith('[Contenido '))result={kind:'human',cart:c.cart,reply:'Recibí un archivo. El equipo continuará la atención por este chat.'};
+   else if(media==='ask_text')result={kind:'reply',cart:c.cart,reply:'Recibí un archivo. Para ayudarte, escribime en texto qué necesitás. Si preferís hablar con una persona, decímelo.'};
    else {
-    const [rawCatalog,client,menus,categories,points,lastOrders]=await Promise.all([db('/rest/v1/guarni_catalog?select=id,name,variant,category,category_id,price,available,active,seasonal,aliases,legacy_generic,service'),db('/rest/v1/crm_clients?id=eq.'+c.client_id+'&select=name'),db('/rest/v1/viejo_menus?status=eq.published&day=eq.'+localDate()+'&select=id,day,status,items'),db('/rest/v1/viejo_catalog_categories?order=position,name'),c.draft_location_id?db('/rest/v1/guarni_locations?id=eq.'+c.draft_location_id+'&conversation_id=eq.'+c.id+'&select=id,address'):Promise.resolve([]),!c.cart?.items?.length&&(orderStatusRequested(job.message.body)||deliveryQueryRequested(job.message.body))?db('/rest/v1/guarni_orders?conversation_id=eq.'+c.id+'&order=created_at.desc&limit=1&select=id,number,status,service,fulfillment,delivery_location_id'):Promise.resolve([])]);
+    const [rawCatalog,client,menus,categories,points,lastOrders,cancellationOrders]=await Promise.all([db('/rest/v1/guarni_catalog?select=id,name,variant,category,category_id,price,available,active,seasonal,aliases,legacy_generic,service'),db('/rest/v1/crm_clients?id=eq.'+c.client_id+'&select=name'),db('/rest/v1/viejo_menus?status=eq.published&day=eq.'+localDate()+'&select=id,day,status,items'),db('/rest/v1/viejo_catalog_categories?order=position,name'),c.draft_location_id?db('/rest/v1/guarni_locations?id=eq.'+c.draft_location_id+'&conversation_id=eq.'+c.id+'&select=id,address'):Promise.resolve([]),!c.cart?.items?.length&&(orderStatusRequested(job.message.body)||deliveryQueryRequested(job.message.body))?db('/rest/v1/guarni_orders?conversation_id=eq.'+c.id+'&order=created_at.desc&limit=1&select=id,number,status,service,fulfillment,delivery_location_id'):Promise.resolve([]),cancellationIntent(job.message.body)?.kind==='cancel'&&!cancellationIntent(job.message.body)?.draftOnly?db('/rest/v1/guarni_orders?conversation_id=eq.'+c.id+'&status=in.(draft,needs_info,pending,accepted,preparing,ready,out_for_delivery)&order=created_at.desc&select=id,number,status,service'):Promise.resolve([])]);
     const catalog=withCategories(rawCatalog,categories);
-    const text=job.message.body;const cart=hydrateDeliveryLocation(c.cart?.items?c.cart:emptyCart(client[0]?.name),points[0]);
+    let text=withoutGreeting(job.message.body,[...activeCatalog('chiperia',catalog,menus),...activeCatalog('buffet',catalog,menus)]),cart=hydrateDeliveryLocation(c.cart?.items?c.cart:emptyCart(client[0]?.name),points[0]);
+    const intake=initialOrder(text,cart,{chiperia:activeCatalog('chiperia',catalog,menus),buffet:activeCatalog('buffet',catalog,menus)},serviceChoice(text));
+    if(intake&&!intake.needsService){text=intake.text;cart=intake.cart;}
     let command;
     if(config.bot_enabled!==true){result={kind:'ignore',cart,reply:''};}
     else {
-    if(!cart.items?.length&&orderStatusRequested(text))command=registeredOrderCommand(text,lastOrders[0]);
+    const mode=fulfillmentCommand(text,cart,activeCatalog(cart.service,catalog,menus));
+    const advisory=readOnlyCommand(text,cart,activeCatalog(cart.service,catalog,menus),config);
+    if(cancellationIntent(text))command={intent:'cancellation'};
+    else if(intake?.needsService)command={intent:'choose_service'};
+    else if(paymentChoice(text,config))command={intent:'payment_selection'};
+    else if(advisory)command=advisory;
+    else if(mode)command=mode;
+    else if((cart.service==='buffet'||serviceChoice(text)==='buffet')&&referencePriceRequest(text,cart,activeCatalog('buffet',catalog,menus)))command={intent:'reference_prices'};
+    else if(!cart.items?.length&&orderStatusRequested(text))command=registeredOrderCommand(text,lastOrders[0]);
     else if(!cart.items?.length&&deliveryQueryRequested(text))command=registeredDeliveryCommand(lastOrders[0],cart);
     else if(!cart.service&&!serviceChoice(text))command={intent:'help'};
     else if(serviceChoice(text))command={intent:'menu'};
     else if(/^(men[uú]|carta|cat[aá]logo)[.!?]?$/i.test(text.trim()))command={intent:'menu'};
-    else if(fulfillmentChoice(text))command={intent:'summary',fulfillment:fulfillmentChoice(text)};
-    else if(!isConfirmation(text)&&!['/cancelar','/reiniciar','cancelar pedido'].includes(text.toLowerCase())&&!/\b(humano|persona|encargado|empleado)\b/i.test(text)){
-     try{command=deterministicConversation(text,cart,activeCatalog(cart.service,catalog,menus),{categories:cart.service==='chiperia'?categories:[]})||await interpret(text,cart,activeCatalog(cart.service,catalog,menus),config);}catch{command={intent:'human'};}
+    else if(!isConfirmation(text)&&!['/cancelar','/reiniciar','cancelar pedido'].includes(text.toLowerCase())&&!humanRequested(text)){
+     try{command=deterministicConversation(text,cart,activeCatalog(cart.service,catalog,menus),{categories:cart.service==='chiperia'?categories:[]})||await interpret(text,cart,activeCatalog(cart.service,catalog,menus),config);}catch{command={intent:'technical_error'};}
     }
-    result=reduceOrder({text,cart,catalog,command,profileName:client[0]?.name,settings:config,menus});
+    result=reduceOrder({text,cart,catalog,command,profileName:client[0]?.name,settings:config,menus,orders:cancellationOrders});
     }
    }
    await rpc('guarni_finish',{p_token:token,p_job:job.job.id,p_revision:c.revision,p_cart:result.cart,p_body:result.reply,p_kind:result.kind});

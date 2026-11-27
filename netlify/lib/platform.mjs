@@ -1,3 +1,4 @@
+import {requestWorkerDispatch} from './worker-dispatch.mjs';
 import {createHmac,timingSafeEqual} from 'node:crypto';
 export const env=(key,fallback='')=>process.env[key]??fallback;
 export function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});}
@@ -29,9 +30,8 @@ export async function member(request){
  return rows[0];
 }
 export async function kick(request){
- const secret=env('WORKER_SECRET');if(!secret)return;
- const origin=new URL(request.url).origin;
- try{await fetch(origin+'/.netlify/functions/dispatch-background',{method:'POST',headers:{'x-worker-secret':secret},signal:AbortSignal.timeout(2500)});}catch{/* La función programada recupera la cola. */}
+ const url=new URL(request.url);
+ return requestWorkerDispatch({origin:url.origin,secret:env('WORKER_SECRET'),source:url.pathname.endsWith('/whatsapp')?'webhook':'api'});
 }
 export function safeSecretEqual(a,b){if(!a||!b)return false;const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);}
 // Extracción de texto reutilizada del recorrido Responses de Veli.

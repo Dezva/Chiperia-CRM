@@ -1,0 +1,289 @@
+✔ Eliminación: sesión, rol, tipo, UUID y confirmación se verifican antes de llamar a la base (93.932584ms)
+✔ Eliminación: explica qué migración falta sin exponer errores de la base (3.611009ms)
+﹣ No aplicable: contrato de la UI anterior sustituida — Interfaz: botones solo para admin, confirmación obligatoria y limpieza del chat seleccionado (0.239813ms) # SKIP
+✔ V1.4 alertas navegador: acceso a pedido, no repite al recargar, sonido por gesto, silenciar y móvil (9804.50302ms)
+✔ V1.4 alertas: contador, primera carga silenciosa, novedades sin duplicados, estados y recarga (2.424341ms)
+✔ V1.4 alertas: almacenamiento no disponible, fallos de JSON y privacidad (1.056879ms)
+✔ V1.4 alertas SQL/API: todos los pendientes, sin límite del listado, sesión y datos mínimos (5963.666035ms)
+✔ Navegador: demo completa de chipería, buffet, fotografía, intervención y móvil (8474.708037ms)
+✔ Buffet: tarifas actuales por categoría/plato, menú vigente y consultas sin cambios comerciales (53.96971ms)
+✔ Buffet: consulta → seguimiento con delivery → pedido, incrementos y corrección contextual sin importes (21.534918ms)
+✔ Buffet: cantidades y observaciones por plato, preservación y aclaración segura de desconocidos (18.31997ms)
+✔ Buffet: disponibilidad y categorías son consultas; menú sin agotados ni platos pendientes (15.823437ms)
+✔ Buffet/IA: consultas validadas con tarifas del servidor; no agrega productos ni notas inventadas (30.208889ms)
+✔ Buffet PostgreSQL/worker: publicación → tarifas vigentes → notas → retiro → pendiente sin importe y aceptación humana (3451.683982ms)
+✔ Worker mixto: carritos, notas y contextos separados; delivery válido y recotización de chipería intacta (2529.019159ms)
+✔ V1.3 navegador: categorías, productos, variantes, precio propio, sinónimos, filtros, permisos y móvil (4083.541913ms)
+✔ V1.3 migración: conserva 31 IDs, precios editados, panes dulces, carritos y pedido histórico de Facturas; reejecutable (3216.14092ms)
+✔ V1.3 SQL/API: categorías normalizadas, reasignación, precios independientes, permisos, sinónimos y bajas (2926.5572ms)
+✔ V1.3 equivalencias y precios: plurales acotados, sin precio de categoría ni bollo=bollito; estado activo independiente (1.79972ms)
+✔ V1.3 interpretación comercial: múltiples productos, sinónimos, cantidades, ambigüedad y precio pendiente (7.010104ms)
+✔ Chipería: pedido real con dos variantes y precios actuales del catálogo (2709.228776ms)
+✔ Chipería: una variante ausente o desconocida no se sustituye por una del catálogo (2188.881328ms)
+✔ WhatsApp pide elegir servicio tras Sí y Sí por favor, incluso al repetirlos (3399.750802ms)
+✔ Navegador: conversación natural con consultas, notas, eliminación y reintento completo en móvil y escritorio (3259.952355ms)
+✔ PGlite/worker: conversación completa con consultas, notas, incrementos, corrección, eliminación, retiro y aceptación humana (4597.678136ms)
+✔ PGlite/worker: timeout, conexión, HTTP y JSON inválido tienen reintentos acotados sin borrar ni pausar el pedido (2644.982895ms)
+✔ PGlite/worker: pedido múltiple inválido reinicia solo su borrador; nuevo intento y cambio de servicio conservan solicitudes e historial (2818.776187ms)
+✔ Conversación completa: consulta de variedad → incremento → retiro → pago consultado → eliminación sin perder observaciones (112.96133ms)
+✔ Compra inválida: identifica pizza, distingue agotado/inactivo/sin precio y exige lista nueva sin restos (37.708162ms)
+✔ Guardas frente a IA adversarial: consultas/sociales no cambian precios, modalidad, nombre, dirección ni carrito (42.466371ms)
+✔ Cantidades repetidas, incrementos, correcciones y notas de varias líneas conservan independencia (24.62728ms)
+✔ Buffet: consultas de estado y disponibilidad no se vuelven tarifas; observaciones y precios humanos intactos (17.478817ms)
+✔ Intenciones: distinguir pregunta, modificación, confirmación, cancelación, humano e incertidumbre (0.442342ms)
+✔ V1.6 frases reales: conectores, nombres con categoría, plurales y variantes específicas (69.962879ms)
+✔ V1.6 categorías vigentes: consultas y correcciones filtran sin cambiar el carrito ni mezclar buffet (25.444353ms)
+✔ V1.6 contexto: variedad, corrección total, incremento, modalidad y aclaraciones sin duplicar (33.017415ms)
+✔ V1.6 SQL/worker: conversaciones reales simuladas, catálogo nuevo, correcciones y webhook duplicado sin IA (3221.373788ms)
+✔ PostgreSQL: pedidos, atención humana y eliminación administrativa transaccional (3197.776082ms)
+✔ Delivery: referencia opcional con punto obligatorio; reclamos no se convierten en horarios ni direcciones (24.715459ms)
+✔ Delivery: recupera dirección del punto vigente, preserva referencia escrita y descarta dirección automática de otro punto (0.37562ms)
+✔ Delivery PostgreSQL/worker: recorrido exacto con punto sin dirección, referencia sin IA, solicitud única y aceptación humana (5953.405479ms)
+✔ Delivery: migración repetida conserva datos, puntos previos con dirección se recuperan y referencias no se guardan como productos (2489.071141ms)
+✔ Correcciones de las capturas: repetir dos no suma cuatro; solo/no cuatro y cantidad al final establecen dos, más suma (10.139582ms)
+✔ Catálogo confirmado: 28 productos con precio, 3 panes dulces inactivos; bollo no se inventa (1.155852ms)
+✔ Selección y cambio de servicio conserva carritos separados sin mezclar precios (49.004061ms)
+✔ Buffet solo del día publicado y sin cálculos desde referencias (2.30082ms)
+✔ Chipería ignora precios externos, valida cantidades y bloquea agotados/temporada (1.106165ms)
+✔ Delivery exige punto y referencia; retiro no solicita ubicación; IA no acepta (16.21555ms)
+✔ Confirmación de chipería: solo retiro, costo cero y recotización de precios (1.115623ms)
+✔ Buffet requiere toma humana y precio acordado; revisión conjunta de delivery (1.813848ms)
+✔ Horarios y fotos: zona Paraguay, delivery solo buffet y validación MIME (1.302491ms)
+✔ Cotización: claves JSONB reordenadas no requieren recotización infinita y ubicaciones no se restauran desde carritos guardados (5.834635ms)
+✔ Retiro: todas las frases de las capturas conservan productos, cantidades, subtotal y contexto (66.977516ms)
+✔ Modalidad: no consulta IA, no obedece info inventada y no modifica precios del buffet (20.373725ms)
+✔ Modalidad: negaciones, preguntas y dos opciones piden aclaración; productos con modalidad no se pierden (18.32202ms)
+✔ Worker/PostgreSQL: pedido exacto, cuatro aclaraciones de retiro, cero IA y una solicitud por Gs. 11.000 (4391.341365ms)
+✔ V1.6 navegador: limpieza y eliminación distintas, confirmación, bloqueo, móvil, roles y contexto conversacional (5042.348252ms)
+✔ V1.6 limpieza: 1501 mensajes reales de DB, vista previa exacta, dedup, cliente conservado, modo humano y auditoría mínima (3445.662333ms)
+✔ V1.6 limpieza: pedidos finalizados y ubicaciones conservados; pedidos activos, cola, leases y vista previa obsoleta bloquean (6970.957127ms)
+✔ V1.6 eliminar cliente: protección activa, consentimiento histórico, cascadas, reintentos antiguos y nueva ficha (3809.441271ms)
+✔ V1.6 API/SQL/RLS: solo admin, texto explícito, token de vista previa y actores verificados (3126.177186ms)
+✔ V1.6 migración: ingest_location ya usado respeta tombstones y nunca repone coordenadas eliminadas (2385.594709ms)
+✔ V1.6 cliente: referencias cruzadas bloquean cascadas y no eliminan registros ajenos (3039.750214ms)
+✔ Puerta de envío desactivada impide solicitudes a Meta incluso para avisos humanos (44.656434ms)
+✔ Visión: exige admin, cachea propuesta por hash y nunca publica automáticamente (26.838334ms)
+▶ PostgreSQL: ubicaciones, delivery y compatibilidad con datos existentes
+  ✔ Migración incremental conserva mensajes, pedidos anteriores y valores nulos compatibles (26.947872ms)
+  ✔ Persistencia estructurada, deduplicación y procesamiento idempotente de la ubicación (80.325576ms)
+  ✔ Coordenadas inválidas se rechazan sin insertar mensajes ni trabajos parciales (8.916603ms)
+  ✔ Delivery sin ubicación bloquea registro incluso si se omite la interfaz (19.445682ms)
+  ✔ Retiro se registra y acepta sin exigir coordenadas (28.636436ms)
+  ✔ Delivery válido crea solicitud pending y asocia el punto sin duplicar pedidos (84.023713ms)
+  ✔ Aceptación de delivery exige punto aunque el personal complete una dirección (5.363395ms)
+  ✔ Ubicación nueva actualiza borrador y luego el único delivery pendiente, con trazabilidad (331.875708ms)
+  ✔ Una ubicación en atención humana se conserva sin responder ni reactivar el bot (56.619107ms)
+  ✔ Varios pedidos requieren selección del personal y rechazan ubicaciones de otra conversación (307.485262ms)
+  ✔ Un pedido aceptado conserva su punto hasta aprobar el cambio y detecta cambios concurrentes (323.185092ms)
+  ✔ Retiro, reinicio y nuevo pedido limpian el punto para evitar reutilizar ubicaciones anteriores (87.173555ms)
+  ✔ Ubicación anticipada se usa en el primer borrador sin pedir otra (32.078766ms)
+  ✔ El personal puede convertir un retiro pendiente a delivery y no cambia pedidos cancelados (65.064851ms)
+  ✔ Los avisos de ubicación inválida o tiempo real no guardan puntos ni derivan a atención humana (36.20066ms)
+  ✔ Una entrega demorada conserva la hora original y requiere revisión sin sustituir puntos actuales (48.906058ms)
+  ✔ RLS y permisos protegen coordenadas y RPC contra visitantes y usuarios no autorizados (13.543445ms)
+  ✔ Borrado administrativo conserva la compatibilidad y limpia ubicaciones e historial asociado (38.43046ms)
+✔ PostgreSQL: ubicaciones, delivery y compatibilidad con datos existentes (7721.30109ms)
+webhook_persistence_failed {"code":null,"message":"temporary database failure"}
+✔ Ubicaciones: extrae el punto con nombres opcionales y admite los límites geográficos (2.336433ms)
+✔ Ubicaciones: rechaza coordenadas vacías, fuera de rango, infinitas y tipos inválidos (0.417587ms)
+✔ Ubicaciones: distingue las señales explícitas de tiempo real sin iniciar seguimiento (0.24141ms)
+✔ Maps: enlace completo con coordenadas reales y copia confirmada por el portapapeles (1.401108ms)
+✔ Delivery: pide modalidad una vez y no exige ubicación para retiro (3.236743ms)
+✔ Delivery: confirmación sin punto conserva carrito, notas y datos y solicita ubicación (2.751386ms)
+✔ Delivery: cambios de modalidad y ubicación anticipada respetan el borrador activo (2.05334ms)
+✔ Webhook: punto firmado se guarda por RPC estructurada, sin texto de archivo ni coordenadas en logs (88.478408ms)
+✔ Worker: ubicaciones válidas, inválidas y de tiempo real evitan IA y conservan atención humana (9.84784ms)
+✔ API: las ubicaciones requieren sesión y se unen a mensajes antiguos en su página correcta (7.581514ms)
+﹣ No aplicable: contrato de la UI anterior sustituida — Interfaz: tarjeta, apertura de Maps, botón de copia y ubicación en detalle y aceptación (0.170241ms) # SKIP
+✔ API: asignar ubicaciones utiliza el integrante validado y conserva la aprobación y versión esperada (2.987466ms)
+✔ Worker: las respuestas de modalidad conservan productos sin IA y los fallos de ubicación se reintentan (26.349787ms)
+✔ V1.5 navegador: login independiente, teclado/móvil, autorización, renovación, cierre y demo (9786.447194ms)
+✔ V1.5 sesión: datos inválidos, autenticación existente y errores sin detalles del proveedor (29.071231ms)
+✔ V1.5 sesión: renovación preventiva y renovación compartida tras HTTP 401, con un reintento (7.76935ms)
+✔ V1.5 sesión: renovación rechazada, HTTP 401 persistente y cierre local incluso sin red (2.764996ms)
+✔ V1.5 sesión: una respuesta tardía no restaura acceso ni tokens después de cerrar sesión (2.382963ms)
+✔ V1.5 backend: sin sesión o sin crm_members no se consultan datos privados en API, fotos ni reconocimiento (8.644055ms)
+✔ Varias palabras mal escritas: frase completa, abreviaciones y cantidad sin ninguna palabra perfecta del producto (47.164126ms)
+✔ Catálogo dinámico y ambigüedad: nombres nuevos sin diccionario, nombres exactos prioritarios y aclaración con cantidad conservada (12.071551ms)
+✔ Seguridad comercial: no reemplaza variedades inexistentes, nombres cortos distintos ni pedidos parciales (87.135635ms)
+✔ PostgreSQL/worker: frase exacta del usuario, producto nuevo y precios actualizados, sin IA ni envíos reales (3430.055812ms)
+✔ Interpretación del proveedor: sanwich, sangui y sanwi contra catálogo actual, sin tabla de equivalencias (86.754868ms)
+✔ Interpretación insegura: errores comerciales piden repetir; cantidades inventadas o lote truncado son fallos del proveedor (107.361932ms)
+✔ Worker/PostgreSQL: captura original y expresión natural; rechazo completo y nuevo pedido sin restos con precios actuales (3735.147117ms)
+✔ V1.4 recuperación: múltiples candidatos, sinónimos, ambigüedad, expansión completa y contexto sin metadatos/fotos/precios (25.13429ms)
+✔ V1.4 proveedor: contexto compacto, ampliación ante help, métrica real, equivalencias comerciales y error seguro (53.845261ms)
+✔ V1.4 PostgreSQL/worker: altas, alias y bajas vigentes sin reinicio, múltiples productos, recotización y métricas privadas (3643.71562ms)
+✔ V1.4 métricas: no inventa tokens ni costos; operaciones separadas y campos permitidos (1.026553ms)
+✔ Los importes salen del catálogo, no del comando de la IA (19.266578ms)
+✔ Confirmación explícita, separada de aceptación del local (0.60201ms)
+✔ Cambio de precio obliga a mostrar un nuevo resumen (0.453053ms)
+✔ Producto agotado no se registra desde un carrito anterior (0.49011ms)
+✔ Rechaza IDs y cantidades inválidos (0.51642ms)
+✔ La IA no puede confirmar un pedido por su cuenta (0.685284ms)
+✔ Solicitar una persona transfiere atención y conserva el carrito (0.543346ms)
+✔ La firma de Meta rechaza cuerpo alterado y secreto ausente (1.614733ms)
+✔ Las 69 opciones de carga inicial tienen precio completo y IDs únicos (18.306435ms)
+✔ Consultar el precio de un producto no arma un pedido (0.940781ms)
+✔ No inventa horarios, pagos ni costos de envío (0.329044ms)
+✔ Navegador: repetir pedido completo tras plato inexistente, sin acumular, en escritorio y móvil (3020.503484ms)
+✔ Buffet: carne inexistente pide repetir todo; pollo y Sopa forman un pedido nuevo sin acumular puré (63.899209ms)
+✔ Buffet: abreviaciones únicas y error milenesa; jamás reemplaza carne por pollo ni elige entre dos sopas (12.308528ms)
+✔ Buffet: agotados reinician el borrador; consultas, menús ausentes y confirmaciones válidas conservan su flujo (19.39504ms)
+✔ Worker/PostgreSQL: intento inválido → repetir pedido completo → nueva lista → una solicitud sin importes (3870.574546ms)
+✔ Navegador: pedido con errores y artículos repetidos, resumen legible en escritorio y móvil (2639.764517ms)
+✔ Pedido de la captura: errores, cantidades al final y líneas repetidas sin perder artículos (31.282152ms)
+✔ Cantidades: límites de línea, comas, punto y coma, prefijos y sufijos (38.007932ms)
+✔ Ortografía: una edición inequívoca, abreviaturas, nombres exactos y ambigüedad comercial (27.147836ms)
+✔ Catálogo vigente y servidor: precios, disponibilidad, sinónimos e IDs validados (28.462078ms)
+✔ Proveedor: una interpretación inválida pide un pedido completo y reinicia el borrador (58.648276ms)
+✔ Worker/PostgreSQL: captura real, repetición, precios actuales, retiro y confirmación sin IA (4660.643982ms)
+✔ V1.7 navegador: buffet, entrega sin referencia, estados, pago independiente, períodos, eliminación y móvil (12016.42103ms)
+✔ V1.7 delivery PostgreSQL/worker: punto sin referencia, aclaraciones sin IA, registro único, revisión y costo humano (3405.401472ms)
+✔ V1.7 pagos y estados: importes confirmados, método obligatorio, concurrencia, recepción única, devolución y transiciones (2383.128381ms)
+✔ V1.7 finanzas: agregados de más de 500 pedidos, servicios, cambio de mes y cobro independiente de entrega (2931.563451ms)
+✔ V1.7 migración: 015 → 016 → 017, evidencia histórica fiable, sin fechas inventadas ni sobrescribir catálogo (2995.449187ms)
+✔ V1.7 eliminación/API/SQL: administrador, vista previa vigente, pagos conservados, no recreación y aislamiento (3443.365884ms)
+✔ Las tarifas por kilo son exclusivas del buffet y no cotizan un pedido (25.166277ms)
+✔ La chipería mantiene precios unitarios, cálculos y carrito separados del buffet (4.187328ms)
+✔ Una consulta de precios del buffet informa las tarifas sin cambiar el servicio ni el borrador activo (1.032694ms)
+✔ Consulta de menú del buffet seguida de pedido conserva el flujo humano de precios (9.659306ms)
+✔ Dos tallarines después de consultar tarifas se procesa como pedido y no como otra tarifa (3.183154ms)
+✔ Chipería no pierde su subtotal después de consultas y pedidos del buffet (3.83539ms)
+✔ Configuración en navegador: días visuales, estados de delivery, pagos, guardado, salida protegida y móvil (4601.190542ms)
+✔ Configuración: validaciones comprensibles, modos independientes, días/pagos sin texto libre y sin inventar horario (3.438305ms)
+✔ Configuración SQL: migración conservadora, backup, validación y persistencia con permisos administrativos (3512.240549ms)
+✔ Delivery y asistente: SQL respeta disabled/pending y apagar el bot evita respuestas también a ubicaciones (3309.068164ms)
+✔ Escritorio/móvil: pedido con errores, delivery rechazado en chipería y controles de CRM coherentes (3674.589119ms)
+✔ Ortografía genérica: una/dos letras, varias líneas y catálogo dinámico; sin equivalencias hardcodeadas (28.117681ms)
+✔ No adivinar productos: empates, palabras cortas, variante inexistente y errores sin ancla literal (6.438866ms)
+✔ Sanwis de verdura: abreviación con cantidad, precio actual y sin producto elegido por defecto (10.277056ms)
+✔ Modalidades: configuración antigua no habilita delivery de chipería y consultas preservan el borrador (9.981744ms)
+✔ 018 PostgreSQL: migración reejecutable, históricos intactos y bloqueo SQL de nuevas entregas (4469.221441ms)
+✔ Worker/API: chipería retiro; buffet con errores de escritura y delivery; precios y confirmación humana vigentes (3510.799231ms)
+▶ V1.1 SQL + worker: retiros/deliveries consecutivos, pausa, reactivación, A/B, cancelación y cambio de servicio
+  ✔ buffet → buffet (356.569629ms)
+  ✔ buffet → chiperia (253.342715ms)
+  ✔ chiperia → buffet (246.506312ms)
+  ✔ chiperia → chiperia (166.083007ms)
+✔ V1.1 SQL + worker: retiros/deliveries consecutivos, pausa, reactivación, A/B, cancelación y cambio de servicio (4399.736568ms)
+worker_dispatch_skipped {"source":"api","reason":"worker_secret_missing"}
+worker_dispatch_skipped {"source":"api","reason":"worker_secret_missing"}
+worker_dispatch_skipped {"source":"api","reason":"worker_secret_missing"}
+✔ V1.1 integración CRM API → PostgreSQL → worker: menú A/B vigente en la MISMA conversación y agotados (3117.471449ms)
+worker_dispatch_skipped {"source":"api","reason":"worker_secret_missing"}
+✔ V1.1 menu_editor: permiso y revocación en API, visión, upload, RPC y RLS; originales preservados (3041.674993ms)
+✔ Storage privado simulado: upload autorizado idempotente, lectura autenticada, hash y conservación de legacy (54.3675ms)
+✔ API general devuelve metadatos de menú sin Base64 ni claves/rutas privadas (4.316587ms)
+✔ Visión: imagen, modelo separado, esquema y respuesta estructurada validada; consumo informado (35.156557ms)
+✔ Visión: rechaza tipos, tamaños, MIME falso, texto administrativo y campos inesperados sin coerción (19.647135ms)
+✔ Visión: errores de red, timeout, JSON inválido, truncamiento, rechazo y HTTP no generan propuesta parcial (11.214809ms)
+✔ Visión endpoint: menu_editor, cache modelo/versionado, revisión humana y rechazo no escribe menú/caché (13.240999ms)
+✔ Prueba real: opt-in obligatorio, hostname aislado explícito y prohibición absoluta en CI (0.441676ms)
+✔ V1.2 navegador: foto única con propuesta múltiple, corrección, revisión, parcial/reemplazo, móvil y mascota configurable (4385.923812ms)
+✔ V1.2: exactamente tres categorías, pending es un estado y clasificación antigua conservadora (3.287325ms)
+✔ V1.2: reemplazo y actualización parcial conservan IDs, sin categorías libres ni disponibilidad de pending (5.841187ms)
+✔ V1.2 migración: snapshot, originales, ambigüedad, tarifas, personalizaciones y registros previos intactos (3070.754744ms)
+worker_dispatch_skipped {"source":"api","reason":"worker_secret_missing"}
+worker_dispatch_skipped {"source":"api","reason":"worker_secret_missing"}
+✔ V1.2 API y SQL: permisos, categoría, disponibilidad, duplicados, fecha, máximos, revisión y actualización (3241.918554ms)
+✔ V1.2 visión: una fotografía completa, múltiples platos, enum estricto, ambiguos pending y caché nueva (13.586743ms)
+worker_dispatch_skipped {"source":"api","reason":"worker_secret_missing"}
+worker_dispatch_skipped {"source":"api","reason":"worker_secret_missing"}
+✔ V1.2 integración: propuesta de una foto → revisión API → PostgreSQL → mismo chatbot actualizado, sin editar cada plato (3896.986173ms)
+✔ El Viejo PostgreSQL: migraciones, seguridad, menú, precios, confirmación, idempotencia y atención humana (3027.724495ms)
+whatsapp_webhook_received {"bytes":233,"signature_present":true}
+whatsapp_signature_rejected {"app_secret_configured":true}
+whatsapp_webhook_received {"bytes":233,"signature_present":true}
+worker_dispatch_skipped {"source":"webhook","reason":"worker_secret_missing"}
+whatsapp_webhook_processed {"accepted":1,"duplicates":0,"ignored_numbers":0,"status_events":0}
+whatsapp_webhook_received {"bytes":233,"signature_present":true}
+webhook_persistence_failed {"code":null,"message":"test failure"}
+whatsapp_webhook_received {"bytes":233,"signature_present":true}
+whatsapp_number_mismatch {"expected_phone_number_id":"another-phone","received_phone_number_id":null}
+whatsapp_webhook_processed {"accepted":0,"duplicates":0,"ignored_numbers":1,"status_events":0}
+✔ Webhook: persiste antes de confirmar, filtra número y permite reintento ante fallo (49.936564ms)
+✔ Webhook: un Phone Number ID diferente no se guarda y queda identificado sin registrar el texto (2.212971ms)
+✔ Diagnóstico: requiere sesión y administrador antes de consultar Meta (3.67007ms)
+✔ Diagnóstico: consulta número y registros con GET, sin enviar mensajes ni exponer secretos (5.133838ms)
+✔ Diagnóstico: conserva el código de Meta y elimina credenciales del mensaje de error (1.952135ms)
+✔ GET público del webhook no se anuncia como prueba de entrega de mensajes (0.62352ms)
+whatsapp_webhook_received {"bytes":205,"signature_present":true}
+worker_dispatch_skipped {"source":"webhook","reason":"worker_secret_missing"}
+whatsapp_webhook_processed {"accepted":1,"duplicates":0,"ignored_numbers":0,"status_events":0}
+whatsapp_webhook_received {"bytes":235,"signature_present":true}
+worker_dispatch_skipped {"source":"webhook","reason":"worker_secret_missing"}
+whatsapp_webhook_processed {"accepted":1,"duplicates":0,"ignored_numbers":0,"status_events":0}
+whatsapp_webhook_received {"bytes":203,"signature_present":true}
+worker_dispatch_skipped {"source":"webhook","reason":"worker_secret_missing"}
+whatsapp_webhook_processed {"accepted":1,"duplicates":0,"ignored_numbers":0,"status_events":0}
+whatsapp_webhook_received {"bytes":228,"signature_present":true}
+worker_dispatch_skipped {"source":"webhook","reason":"worker_secret_missing"}
+whatsapp_webhook_processed {"accepted":1,"duplicates":0,"ignored_numbers":0,"status_events":0}
+whatsapp_webhook_received {"bytes":232,"signature_present":true}
+worker_dispatch_skipped {"source":"webhook","reason":"worker_secret_missing"}
+whatsapp_webhook_processed {"accepted":1,"duplicates":0,"ignored_numbers":0,"status_events":0}
+whatsapp_webhook_received {"bytes":692,"signature_present":true}
+worker_dispatch_skipped {"source":"webhook","reason":"worker_secret_missing"}
+whatsapp_webhook_processed {"accepted":4,"duplicates":1,"ignored_numbers":0,"status_events":0}
+whatsapp_webhook_received {"bytes":229,"signature_present":true}
+worker_dispatch_skipped {"source":"webhook","reason":"worker_secret_missing"}
+whatsapp_webhook_processed {"accepted":1,"duplicates":0,"ignored_numbers":0,"status_events":0}
+✔ WhatsApp buffet: stickers, reacciones y GIF conservan el carrito, y el bot sigue respondiendo (4735.286193ms)
+whatsapp_webhook_received {"bytes":207,"signature_present":true}
+worker_dispatch_skipped {"source":"webhook","reason":"worker_secret_missing"}
+whatsapp_webhook_processed {"accepted":1,"duplicates":0,"ignored_numbers":0,"status_events":0}
+whatsapp_webhook_received {"bytes":235,"signature_present":true}
+worker_dispatch_skipped {"source":"webhook","reason":"worker_secret_missing"}
+whatsapp_webhook_processed {"accepted":1,"duplicates":0,"ignored_numbers":0,"status_events":0}
+whatsapp_webhook_received {"bytes":203,"signature_present":true}
+worker_dispatch_skipped {"source":"webhook","reason":"worker_secret_missing"}
+whatsapp_webhook_processed {"accepted":1,"duplicates":0,"ignored_numbers":0,"status_events":0}
+whatsapp_webhook_received {"bytes":223,"signature_present":true}
+worker_dispatch_skipped {"source":"webhook","reason":"worker_secret_missing"}
+whatsapp_webhook_processed {"accepted":1,"duplicates":0,"ignored_numbers":0,"status_events":0}
+whatsapp_webhook_received {"bytes":692,"signature_present":true}
+worker_dispatch_skipped {"source":"webhook","reason":"worker_secret_missing"}
+whatsapp_webhook_processed {"accepted":4,"duplicates":1,"ignored_numbers":0,"status_events":0}
+whatsapp_webhook_received {"bytes":224,"signature_present":true}
+worker_dispatch_skipped {"source":"webhook","reason":"worker_secret_missing"}
+whatsapp_webhook_processed {"accepted":1,"duplicates":0,"ignored_numbers":0,"status_events":0}
+✔ WhatsApp chiperia: stickers, reacciones y GIF conservan el carrito, y el bot sigue respondiendo (2326.623748ms)
+whatsapp_webhook_received {"bytes":205,"signature_present":true}
+worker_dispatch_skipped {"source":"webhook","reason":"worker_secret_missing"}
+whatsapp_webhook_processed {"accepted":1,"duplicates":0,"ignored_numbers":0,"status_events":0}
+whatsapp_webhook_received {"bytes":203,"signature_present":true}
+worker_dispatch_skipped {"source":"webhook","reason":"worker_secret_missing"}
+whatsapp_webhook_processed {"accepted":1,"duplicates":0,"ignored_numbers":0,"status_events":0}
+whatsapp_webhook_received {"bytes":211,"signature_present":true}
+worker_dispatch_skipped {"source":"webhook","reason":"worker_secret_missing"}
+whatsapp_webhook_processed {"accepted":1,"duplicates":0,"ignored_numbers":0,"status_events":0}
+whatsapp_webhook_received {"bytes":211,"signature_present":true}
+worker_dispatch_skipped {"source":"webhook","reason":"worker_secret_missing"}
+whatsapp_webhook_processed {"accepted":1,"duplicates":0,"ignored_numbers":0,"status_events":0}
+whatsapp_webhook_received {"bytes":211,"signature_present":true}
+worker_dispatch_skipped {"source":"webhook","reason":"worker_secret_missing"}
+whatsapp_webhook_processed {"accepted":1,"duplicates":0,"ignored_numbers":0,"status_events":0}
+whatsapp_webhook_received {"bytes":217,"signature_present":true}
+worker_dispatch_skipped {"source":"webhook","reason":"worker_secret_missing"}
+whatsapp_webhook_processed {"accepted":1,"duplicates":0,"ignored_numbers":0,"status_events":0}
+whatsapp_webhook_received {"bytes":417,"signature_present":true}
+worker_dispatch_skipped {"source":"webhook","reason":"worker_secret_missing"}
+whatsapp_webhook_processed {"accepted":3,"duplicates":0,"ignored_numbers":0,"status_events":0}
+whatsapp_webhook_received {"bytes":228,"signature_present":true}
+worker_dispatch_skipped {"source":"webhook","reason":"worker_secret_missing"}
+whatsapp_webhook_processed {"accepted":1,"duplicates":0,"ignored_numbers":0,"status_events":0}
+✔ Multimedia no interpretada pide texto; atención humana y registros antiguos siguen funcionando (2260.950271ms)
+✔ Worker auth: Unicode viaja en ASCII, comparación exacta y compatibilidad con secreto ASCII anterior (84.396828ms)
+✔ Despertar worker: webhook/API y sweep usan encabezados ASCII sin revelar clave ni token (17.347656ms)
+✔ Despacho: clave/URL ausentes, HTTP 403 y errores de red se distinguen sin registrar respuesta ni secretos (5.428776ms)
+✔ Dispatch: peticiones ajenas nunca reservan trabajos; la autenticación correcta deja inicio y fin (33.441386ms)
+✔ Dispatch: fallo del procesador queda visible y se propaga para conservar la recuperación existente (2.015783ms)
+✔ PostgreSQL + webhook/cron/worker: secreto Unicode, envío simulado y reintento sin duplicados (3535.250145ms)
+ℹ tests 197
+ℹ suites 0
+ℹ pass 195
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 2
+ℹ todo 0
+ℹ duration_ms 130955.674209
