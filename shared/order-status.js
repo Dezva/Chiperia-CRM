@@ -1,5 +1,5 @@
-import {categoryKey} from './catalog.js';
-export function orderStatusRequested(text){const t=categoryKey(text);return /\b(?:pedido|solicitud|carrito)\b/.test(t)&&/\b(?:tienes|tenes|tengo|esta|quedo|estado|como|ver|mostrar|mostrame|resumen|detalle|revisar|almacenad\w*|guardad\w*|registrad\w*|confirmad\w*|envie|hice|falta)\b/.test(t);}
+import {intentText} from './customer-language.js';
+export function orderStatusRequested(text){const t=intentText(text);return /\b(?:pedido|solicitud|carrito)\b/.test(t)&&/\b(?:tienes|tenes|tengo|esta|quedo|estado|como|ver|mostrar|mostrame|resumen|detalle|revisar|almacenad\w*|guardad\w*|registrad\w*|confirmad\w*|envie|hice|falta)\b/.test(t);}
 export function registeredOrderCommand(text,order){
  if(!orderStatusRequested(text))return null;
  if(!order)return {intent:'clarify',message:'No veo una solicitud registrada en esta conversación. Decime los productos y cantidades que querés pedir.'};

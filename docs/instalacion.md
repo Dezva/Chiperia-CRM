@@ -127,3 +127,7 @@ El commit de activación se sube sin `[skip netlify]` y contiene como antecedent
 El push permite que la integración Git construya el sitio y sus funciones y que auto publish publique el resultado según la configuración existente del sitio. No se modifican esos ajustes externos desde el repositorio. El workflow de GitHub sigue ejecutando únicamente build y pruebas.
 
 Comprobar en el resultado Where: Production y el commit más reciente. Las variables siguen siendo las del contexto Production; no se modifican secretos ni credenciales desde el repositorio. Para verificar la corrección del worker, health debe mostrar `workerAuth: "hmac-sha256-v1"` y dispatch debe registrar `worker_started` tras un mensaje nuevo.
+
+## Lenguaje cotidiano y confirmación corta
+
+La revisión posterior a `b508e47` reúne las mejoras de interpretación, confirmación corta y primer pedido directo en una publicación conjunta. Ver [guía y orden de actualización 019](revisiones/lenguaje-cotidiano.md). La 019 solo cambia un aviso y debe aplicarse después de publicar el código que acepta CONFIRMAR. No repetir 017 ni 018.

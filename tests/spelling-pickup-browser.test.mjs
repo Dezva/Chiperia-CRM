@@ -27,7 +27,7 @@ test('Escritorio/móvil: pedido con errores, delivery rechazado en chipería y c
    await page.setViewportSize({width,height});if(label==='mobile')await page.waitForFunction(()=>document.getElementById('sidebar').getBoundingClientRect().right<=0);
    await reply().scrollIntoViewIfNeeded();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:join(tmpdir(),'ortografia-retiro-'+label+'.png'),fullPage:true});
   }
-  await say('retiro');assert.equal((await cart()).fulfillment,'retiro');assert.match(await reply().innerText(),/CONFIRMAR PEDIDO/);
+  await say('retiro');assert.equal((await cart()).fulfillment,'retiro');assert.match(await reply().innerText(),/CONFIRMAR/);
   await page.setViewportSize({width:1440,height:950});await page.locator('[data-view="settings"]').click();
   assert.equal(await page.locator('[name="delivery_mode_chiperia"]').count(),1);assert.equal(await page.locator('[name="delivery_mode_chiperia"]').inputValue(),'disabled');assert.equal(await page.locator('[name="delivery_mode_buffet"]').count(),3);
   await page.locator('[data-view="orders"]').click();await page.locator('[data-do="neworder"]').click();

@@ -1,4 +1,4 @@
-import {matchCommercial,orderFillers,quantityWords} from './catalog-matching.js';
+import {matchCommercial,hasProductEvidence,orderFillers,quantityWords} from './catalog-matching.js';
 import {productName,sellable} from './catalog.js';
 import {retryOrderCommand} from './order-retry.js';
 import {isPurchaseAttempt} from './message-intent.js';
@@ -17,7 +17,7 @@ export function quantityProblem(text){
 
 export function invalidOrderCommand(text,cart,catalog,{reason}={}){
  const found=matchCommercial(text,catalog,{context:cart?.conversation});
- if(!isPurchaseAttempt(text,{hasProducts:!!(found.matches.length||found.ambiguous.length)}))return {intent:'clarify',message:'No entendí bien el mensaje. Tu pedido sigue guardado. ¿Podés explicarme qué necesitás o preferís hablar con el equipo?'};
+ if(!isPurchaseAttempt(text,{hasProducts:hasProductEvidence(found),catalog}))return {intent:'clarify',message:'No entendí bien el mensaje. Tu pedido sigue guardado. ¿Podés explicarme qué necesitás o preferís hablar con el equipo?'};
  if(reason||quantityProblem(text))return retryOrderCommand(reason||quantityProblem(text));
  const blocked=found.matches.filter(m=>!(found.unknown.length&&(m.variantOnly||m.prefixOnly))&&(m.product.service==='buffet'?!m.product.available:!sellable(m.product)));
  if(blocked.length)return retryOrderCommand([...new Set(blocked.map(m=>unavailableReason(m.product)))].join(' '));

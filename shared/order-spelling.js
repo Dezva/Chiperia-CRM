@@ -1,6 +1,6 @@
 // Correcciones ortográficas, nunca equivalencias entre productos o categorías.
 // Solo se corrige hacia palabras presentes en el catálogo actual del servicio.
-function oneEdit(a, b) {
+export function oneEdit(a, b) {
  if (Math.abs(a.length - b.length) > 1) return false;
  let i = 0;
  while (i < a.length && a[i] === b[i]) i++;

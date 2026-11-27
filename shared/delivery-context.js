@@ -1,6 +1,6 @@
 import {categoryKey} from './catalog.js';
 export const hasDeliveryReference=cart=>typeof cart?.address==='string'&&cart.address.trim().length>=3;
-export const deliveryReadyPrompt='Ya recibí tu ubicación 📍. Escribí CONFIRMAR PEDIDO para enviar tu solicitud al local. La referencia adicional es opcional.';
+export const deliveryReadyPrompt='Ya recibí tu ubicación 📍. Escribí CONFIRMAR para enviar tu solicitud al local. La referencia adicional es opcional.';
 export function deliveryQueryRequested(text){
  const t=categoryKey(text),referenceStatus=/\breferencia\b/.test(t)&&(/^(?:que|cual|como|no|ya|sin|falta)\b/.test(t)||/[?¿]/.test(String(text||''))||t==='referencia');
  return referenceStatus||/\b(?:ubicacion|localizacion)\b/.test(t)||/\bno (?:te )?(?:estoy |estaba )?pidiendo\b.*\b(?:horario|informacion)\b/.test(t)||/\bya\b.*\b(?:envi\w*|mand\w*|pase|comparti\w*)\b/.test(t);

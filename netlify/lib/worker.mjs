@@ -5,6 +5,7 @@ import {hydrateDeliveryLocation,deliveryQueryRequested,registeredDeliveryCommand
 import {deterministicConversation,fulfillmentCommand} from '../../shared/conversation-context.js';
 import {readOnlyCommand,paymentChoice} from '../../shared/customer-messages.js';
 import {humanRequested} from '../../shared/message-intent.js';
+import {initialOrder} from '../../shared/initial-order.js';
 import {interpret} from './conversation.mjs';
 import {withCategories} from '../../shared/catalog.js';
 import {randomUUID} from 'node:crypto';
@@ -64,13 +65,16 @@ export async function runWorker({budgetMs=45000}={}){
    else {
     const [rawCatalog,client,menus,categories,points,lastOrders]=await Promise.all([db('/rest/v1/guarni_catalog?select=id,name,variant,category,category_id,price,available,active,seasonal,aliases,legacy_generic,service'),db('/rest/v1/crm_clients?id=eq.'+c.client_id+'&select=name'),db('/rest/v1/viejo_menus?status=eq.published&day=eq.'+localDate()+'&select=id,day,status,items'),db('/rest/v1/viejo_catalog_categories?order=position,name'),c.draft_location_id?db('/rest/v1/guarni_locations?id=eq.'+c.draft_location_id+'&conversation_id=eq.'+c.id+'&select=id,address'):Promise.resolve([]),!c.cart?.items?.length&&(orderStatusRequested(job.message.body)||deliveryQueryRequested(job.message.body))?db('/rest/v1/guarni_orders?conversation_id=eq.'+c.id+'&order=created_at.desc&limit=1&select=id,number,status,service,fulfillment,delivery_location_id'):Promise.resolve([])]);
     const catalog=withCategories(rawCatalog,categories);
-    const text=job.message.body;const cart=hydrateDeliveryLocation(c.cart?.items?c.cart:emptyCart(client[0]?.name),points[0]);
+    let text=job.message.body,cart=hydrateDeliveryLocation(c.cart?.items?c.cart:emptyCart(client[0]?.name),points[0]);
+    const intake=initialOrder(text,cart,{chiperia:activeCatalog('chiperia',catalog,menus),buffet:activeCatalog('buffet',catalog,menus)},serviceChoice(text));
+    if(intake&&!intake.needsService){text=intake.text;cart=intake.cart;}
     let command;
     if(config.bot_enabled!==true){result={kind:'ignore',cart,reply:''};}
     else {
     const mode=fulfillmentCommand(text,cart,activeCatalog(cart.service,catalog,menus));
     const advisory=readOnlyCommand(text,cart,activeCatalog(cart.service,catalog,menus),config);
-    if(paymentChoice(text,config))command={intent:'payment_selection'};
+    if(intake?.needsService)command={intent:'choose_service'};
+    else if(paymentChoice(text,config))command={intent:'payment_selection'};
     else if(advisory)command=advisory;
     else if(mode)command=mode;
     else if((cart.service==='buffet'||serviceChoice(text)==='buffet')&&referencePriceRequest(text,cart,activeCatalog('buffet',catalog,menus)))command={intent:'reference_prices'};

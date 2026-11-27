@@ -3,13 +3,13 @@ import {BUFFET_CATEGORIES} from './buffet-categories.js';
 import {referencePriceRequest} from './reference-prices.js';
 import {orderStatusRequested} from './order-status.js';
 import {deliveryStatusCommand,deliveryReferenceCommand,explicitReferenceCommand} from './delivery-context.js';
-import {isConfirmation} from './order-engine.js';
+import {intentText,isCustomerConfirmation as isConfirmation} from './customer-language.js';
 import {readOnlyCommand} from './customer-messages.js';
 import {humanRequested,isPurchaseAttempt,messageIntent} from './message-intent.js';
 import {invalidOrderCommand,quantityProblem} from './order-diagnostics.js';
 import {cartOperationCommand} from './cart-operations.js';
 import {commercialText,productTerms,productName,sellable} from './catalog.js';
-import {orderFillers,matchCommercial,deterministicOrder,orderWithNotes,quantityWords,orderOperation,inlineFulfillment,orderText,requestedItems,clarifyOptions} from './catalog-matching.js';
+import {orderFillers,matchCommercial,hasProductEvidence,deterministicOrder,orderWithNotes,quantityWords,orderOperation,inlineFulfillment,orderText,requestedItems,clarifyOptions} from './catalog-matching.js';
 const grammatical=new Set([...orderFillers,...commercialText('producto productos porfa porfavor podes podria podrias traer traeme pasame preparame enviame mandame favor quiero quisiera necesito gustaria me el la lo los las un una uno y e para a mi agregar agrega agregame dame llevo llevar pedir pedido con bien por favor gracias voy querer te dije al final total cambia cambiar solo solamente unicamente no').split(' ')]);
 const queryWords=new Set('que cual cuales tienen tiene hay venden vende disponible disponibles esta estan hoy buffet opcion opciones'.split(' '));
 export function categoryRequest(text,catalog,categories=[]){
@@ -47,10 +47,14 @@ function quantityFollowup(text,cart,catalog){
 }
 export function fulfillmentCommand(text,cart,catalog){
  if(explicitReferenceCommand(text,cart))return null;
+ // En chipería solo hay retiro. Un sí a esa pregunta elige la modalidad;
+ // nunca equivale a enviar o aceptar el pedido.
+ if(cart?.service==='chiperia'&&cart.items?.length&&cart.quoted&&cart.fulfillment==='a_coordinar'&&!cart.conversation?.pending&&/^si(?:,? por favor)?[.!]*$/.test(intentText(text)))return {intent:'summary',fulfillment:'retiro'};
  const state=fulfillmentIntent(text);if(!state.mentioned)return null;
  if(orderStatusRequested(text))return null;
  const found=matchCommercial(text,catalog,{context:cart?.conversation});
- if(found.matches.length||found.ambiguous.length)return null;
+ if(messageIntent(text,{hasProducts:hasProductEvidence(found),catalog}).topic==='menu')return null;
+ if(hasProductEvidence(found))return null;
  if(state.choice)return {intent:'summary',fulfillment:state.choice};
  // Las consultas de precios/horarios conservan su intención; no eligen modalidad.
  if(/\b(?:precio|tarifa|cuanto|horario|costo)\b/.test(commercialText(text)))return null;
@@ -67,15 +71,15 @@ export function deterministicConversation(text,cart,catalog,{categories=[]}={}){
  if(cart?.service==='buffet'){const pricing=referencePriceRequest(text,cart,catalog);if(pricing)return pricing;}
  if(orderStatusRequested(text)&&cart?.items?.length)return {intent:'draft_status'};
  const status=deliveryStatusCommand(text,cart);if(status)return status;
- const t=commercialText(text);
+ const t=commercialText(intentText(text));
  if(/^(?:hola|buenas|buen dia|buenos dias|buenas tardes|buenas noches|gracias|muchas gracias|ok|dale)$/.test(t))return {intent:'help'};
  if(/^(horario|horarios|forma pago|forma pago disponible|metodo pago|metodo pago disponible)$/.test(t))return {intent:'info'};
  if(cart?.service==='buffet'&&!catalog.length)return {intent:'menu'};
  const found=matchCommercial(text,catalog,{context:cart?.conversation}),category=categoryRequest(text,catalog,cart?.service==='buffet'?BUFFET_CATEGORIES:categories),isQuery=/\b(?:que|cual|clase|tipo|vendes|vende|venden|tienen|tiene|hay|mostra|mostrame|solo|unicamente|cuanto|menu|catalogo|carta)\b/.test(t)||category?.category_names?.some(name=>commercialText(name)===t);
- if(messageIntent(text,{hasProducts:!!(found.matches.length||found.ambiguous.length)}).topic==='menu'&&!category)return {intent:'menu'};
- if(isPurchaseAttempt(text,{hasProducts:!!(found.matches.length||found.ambiguous.length)})&&(quantityProblem(text)||found.matches.some(m=>m.qty<1||m.qty>30)))return invalidOrderCommand(text,cart,catalog);
+ if(messageIntent(text,{hasProducts:hasProductEvidence(found),catalog}).topic==='menu'&&!category)return {intent:'menu'};
+ if(isPurchaseAttempt(text,{hasProducts:hasProductEvidence(found),catalog})&&(quantityProblem(text)||found.matches.some(m=>m.qty<1||m.qty>30)))return invalidOrderCommand(text,cart,catalog);
  if(cart?.service==='buffet'){
-  if(/\b(?:menu|carta)\b/.test(t)||/\b(?:que|cual)\b/.test(t)&&/\b(?:plato|hay|tienen|opcion|sirven|venden)\b/.test(t))return {intent:'menu',...(category||{})};
+  if(/\b(?:menu|carta)\b/.test(t)&&!found.matches.length&&!found.ambiguous.length||/\b(?:que|cual)\b/.test(t)&&/\b(?:plato|hay|tienen|opcion|sirven|venden)\b/.test(t))return {intent:'menu',...(category||{})};
   if(/\b(?:tienen|tiene|hay|disponible|venden)\b/.test(t)&&found.matches.length){
    if(found.unknown.some(word=>!grammatical.has(word)&&!queryWords.has(word)))return {intent:'clarify',message:'No identifiqué ese plato completo en el menú del buffet de hoy. Escribí MENÚ para consultar las opciones. No cambié tu pedido.'};
    return {intent:'clarify',message:found.matches.map(m=>productName(m.product)+(m.product.available?' está disponible en el menú de hoy.':' no está disponible en el menú de hoy.')).join('\n')+' No cambié tu pedido.'};
@@ -126,7 +130,14 @@ export function validateInterpretation(command,text,cart,catalog,candidates,{sem
  if(orderAttempt&&!['update_cart','help','human'].includes(command.intent))throw Error('commercial_equivalence_unconfirmed');
  if(command.intent==='menu'){const request=categoryRequest(text,catalog);if(request)return {intent:'menu',...request};if(command.category){const group=categoryRequest(command.category,catalog);if(!group)throw Error('commercial_equivalence_unconfirmed');return {intent:'menu',...group};}return {intent:'menu'};}
  if(command.intent!=='update_cart'){
-  if(command.intent==='info'||command.intent==='summary'&&!/^(?:resumen|mi pedido|mi carrito|ver pedido)$/.test(requestText))throw Error('commercial_equivalence_unconfirmed');
+  if(command.intent==='info'){
+   const found=matchCommercial(text,catalog,{context:cart?.conversation});
+   const state=messageIntent(text,{hasProducts:hasProductEvidence(found),catalog});
+   if(state.kind!=='query'||!['hours','location','payments','fulfillment'].includes(command.query))throw Error('commercial_equivalence_unconfirmed');
+   if(state.topic&&state.topic!=='general'&&state.topic!==command.query)throw Error('commercial_equivalence_unconfirmed');
+   return {intent:'info',topic:command.query};
+  }
+  if(command.intent==='summary'&&!/^(?:resumen|mi pedido|mi carrito|ver pedido)$/.test(requestText))throw Error('commercial_equivalence_unconfirmed');
   return {intent:command.intent};
  }
  if(/^\s*no\s+(?:quiero|agreg|sum)/i.test(String(text)))throw Error('commercial_equivalence_unconfirmed');

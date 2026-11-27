@@ -5,6 +5,7 @@ import {retryOrderCommand} from './order-retry.js';
 export const quantityWords={un:1,uno:1,una:1,dos:2,tres:3,cuatro:4,cinco:5,seis:6,siete:7,ocho:8,nueve:9,diez:10,once:11,doce:12,otro:1,otra:1};
 export const orderFillers=new Set(commercialText('quiero quisiera querria dame deme llevo llevar necesito pedir pedido agregar agrega agregame por favor y e con para el la lo los las me mi a unidad unidades unidade gracias hola buenas voy querer solo solamente unicamente mas suma sumame sumar anade anadi te dije lee lea mensaje bien entonces das darias podes podrias podria traeme preparame pasame enviame mandame gustaria').split(' '));
 const filler=orderFillers;
+export const hasProductEvidence=found=>[...found.matches,...found.ambiguous].some(match=>!match.unsafeSemantic);
 // Una cantidad declarada establece el total; sumar requiere una intención de incremento.
 export function orderText(text){
  let t=commercialText(text);if(/^\s*no\s*,/i.test(String(text)))t=t.replace(/^no\s+/,'');
