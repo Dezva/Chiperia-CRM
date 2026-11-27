@@ -2,7 +2,7 @@ import {referencePriceRequest,referencePriceReply} from './reference-prices.js';
 import {deterministicConversation,fulfillmentCommand,categoryRequest} from './conversation-context.js';
 import {commercialText,sellable,productName} from './catalog.js';
 import {deliveryMode,WEEK_DAYS} from './settings.js';
-import {CATEGORY_IDS} from './buffet-categories.js';
+import {BUFFET_CATEGORIES,CATEGORY_IDS} from './buffet-categories.js';
 import {normalize} from './order-engine.js';
 import {intentText,isCustomerConfirmation as isConfirmation} from './customer-language.js';
 import {initialOrder} from './initial-order.js';
@@ -105,7 +105,7 @@ export function reduceOrder({text,cart:old,catalog=[],menus=[],command={},profil
    let reply;
    if(advisory.topic==='price'&&target==='buffet')reply=referencePriceReply(text,targetList,settings);
    else if(['hours','payments','location'].includes(advisory.topic))reply=informationReply({topic:advisory.topic},targetCart,settings);
-   else if(advisory.topic==='menu')reply=targetList.filter(p=>target==='buffet'?p.available:sellable(p)).map(p=>productName(p)+(target==='chiperia'?': '+money(p.price):'')).join('\n')||'Todavía no hay opciones publicadas para ese servicio.';
+   else if(advisory.topic==='menu')reply=menuReply(targetCart,targetList,categoryRequest(text,targetList,target==='buffet'?BUFFET_CATEGORIES:[])||{});
    else {const response=readOnlyCommand(text,targetCart,targetList,settings);reply=response?.message||'Podés escribir '+(target==='buffet'?'BUFFET':'CHIPERÍA')+' para consultar las opciones de ese servicio.';}
    return {cart,kind:'reply',reply:reply+'\nTu borrador de '+(cart.service==='buffet'?'buffet':'chipería')+' sigue igual.'};
   }
@@ -119,7 +119,7 @@ export function reduceOrder({text,cart:old,catalog=[],menus=[],command={},profil
  const list=cart.service?activeCatalog(cart.service,catalog,menus,now):[];
  const mentionedProducts=matchCommercial(text,list,{context:cart.conversation});
  const menuIntent=messageIntent(text,{hasProducts:hasProductEvidence(mentionedProducts),catalog:list});
- if(cart.service&&menuIntent.topic==='menu')return {cart,kind:'reply',reply:menuReply(cart,list,command.intent==='menu'?command:{...categoryRequest(text,list)})};
+ if(cart.service&&menuIntent.topic==='menu')return {cart,kind:'reply',reply:menuReply(cart,list,{...command,...categoryRequest(text,list,cart.service==='buffet'?BUFFET_CATEGORIES:[])})};
  const reference=explicitReferenceCommand(text,cart),edit=reference?null:cartOperationCommand(text,cart,list);if(reference)command=reference;else if(edit)command=edit;
  const mode=fulfillmentCommand(text,cart,list);if(mode)command=mode;
  if(!mode&&cart.service==='buffet'&&(command.intent==='reference_prices'||referencePriceRequest(text,cart,list))){

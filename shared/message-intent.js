@@ -1,3 +1,5 @@
+import {BUFFET_CATEGORIES} from './buffet-categories.js';
+import {categoryRequest} from './category-query.js';
 import {commercialText,productTerms} from './catalog.js';
 import {intentText,isCustomerConfirmation as isConfirmation} from './customer-language.js';
 import {fulfillmentIntent} from './fulfillment.js';
@@ -28,6 +30,13 @@ export function messageIntent(text,{hasProducts=false,catalog=[]}={}){
  // Pedir información en una frase cotidiana no equivale a comprar un artículo.
  const show=/\b(?:ver|mostrar|mostrame|pasame|pasas|mandame|envias|enviar|consultar|conocer|saber)\b/.test(raw);
  const negated=/\b(?:no|sin|nunca)\b/.test(t),quantity=/\b(?:\d+|un|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\b/.test(t);
+ // Una categoría consultada no es un producto desconocido. Las cantidades y las
+ // modificaciones conservan el recorrido de compra; los nombres exactos también.
+ const category=categoryRequest(raw,catalog,!catalog.length||/\bbuffet\b/.test(raw)?BUFFET_CATEGORIES:[]);
+ const inquiry=/\b(?:que|cual|cuales|puedes|podes|podrias|podria|quisiera|quiero|necesito|darme|decirme|informacion|lista|opcion|ofrece|ofrecen|provee|tienen|tenes|hay)\b/.test(t);
+ if(category&&!quantity&&!change&&!negated&&(!hasProducts||show)&&
+    !/\b(?:precio|costo|tarifa|valor|cuanto|kilo)\b/.test(t)&&
+    (show||inquiry||request||category.category_names.some(name=>commercialText(name)===t)))return {kind:'query',topic:'menu'};
  const menu=/\b(?:menu|catalogo|carta)\b/.test(t)&&(!hasProducts&&!quantity||show||/\b(?:menu|catalogo|carta)\b/.test(commercialText(text)));
  if(menu&&!change&&!negated&&(/\b(?:el menu|menu dia|menu hoy)\b/.test(t)||/^(?:menu|catalogo|carta)[.!?]*$/.test(t)))return {kind:'query',topic:'menu'};
  if((!hasProducts||show)&&!change&&!negated){

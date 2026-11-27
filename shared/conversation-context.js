@@ -1,3 +1,5 @@
+import {categoryRequest} from './category-query.js';
+export {categoryRequest} from './category-query.js';
 import {fulfillmentIntent} from './fulfillment.js';
 import {BUFFET_CATEGORIES} from './buffet-categories.js';
 import {referencePriceRequest} from './reference-prices.js';
@@ -12,13 +14,6 @@ import {commercialText,productTerms,productName,sellable} from './catalog.js';
 import {orderFillers,matchCommercial,hasProductEvidence,deterministicOrder,orderWithNotes,quantityWords,orderOperation,inlineFulfillment,orderText,requestedItems,clarifyOptions} from './catalog-matching.js';
 const grammatical=new Set([...orderFillers,...commercialText('producto productos porfa porfavor podes podria podrias traer traeme pasame preparame enviame mandame favor quiero quisiera necesito gustaria me el la lo los las un una uno y e para a mi agregar agrega agregame dame llevo llevar pedir pedido con bien por favor gracias voy querer te dije al final total cambia cambiar solo solamente unicamente no').split(' ')]);
 const queryWords=new Set('que cual cuales tienen tiene hay venden vende disponible disponibles esta estan hoy buffet opcion opciones'.split(' '));
-export function categoryRequest(text,catalog,categories=[]){
- const t=commercialText(text),groups=categories.length?categories:[...new Map(catalog.filter(p=>p.category).map(p=>[p.category_id||p.category,{id:p.category_id||p.category,name:p.category,active:p.category_active!==false}])).values()];
- const hits=groups.filter(c=>c.active!==false&&commercialText(c.name)&&(' '+t+' ').includes(' '+commercialText(c.name)+' ')).sort((a,b)=>commercialText(b.name).length-commercialText(a.name).length);
- if(!hits.length)return null;
- const chosen=hits.filter(c=>!hits.some(other=>other!==c&&commercialText(other.name).startsWith(commercialText(c.name)+' '))),roots=chosen.map(c=>commercialText(c.name));
- return {category_ids:groups.filter(c=>c.active!==false&&roots.some(root=>commercialText(c.name)===root||commercialText(c.name).startsWith(root+' '))).map(c=>c.id),category_names:groups.filter(c=>c.active!==false&&roots.some(root=>commercialText(c.name)===root||commercialText(c.name).startsWith(root+' '))).map(c=>c.name)};
-}
 export function recoverCandidates(text,cart,catalog,{expanded=false}={}){
  if(expanded)return [...catalog];
  const found=matchCommercial(text,catalog,{context:cart?.conversation}),ids=new Set([...(cart?.items||[]).map(x=>x.variant_id),...(cart?.conversation?.pending?.candidate_ids||[]),...found.matches.map(m=>m.product.id),...found.ambiguous.flatMap(a=>a.products.map(p=>p.id))]);
