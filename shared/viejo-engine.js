@@ -9,7 +9,7 @@ import {normalize} from './order-engine.js';
 import {intentText,isCustomerConfirmation as isConfirmation} from './customer-language.js';
 import {initialOrder} from './initial-order.js';
 import {fulfillmentChoice} from './fulfillment.js';
-import {repeatOrderPrompt,retryOrderCommand} from './order-retry.js';
+import {repeatOrderPrompt,retryOrderHelp,retryOrderCommand,unclearMessageHelp} from './order-retry.js';
 import {readOnlyCommand,informationReply,paymentChoice} from './customer-messages.js';
 import {humanRequested,isPurchaseAttempt,messageIntent} from './message-intent.js';
 import {matchCommercial,hasProductEvidence} from './catalog-matching.js';
@@ -82,10 +82,11 @@ export function demoCommand(text,cart,catalog,categories=[]){
  const resolved=deterministicConversation(text,cart,catalog,{categories});if(resolved)return resolved;
  return cart?.service?invalidOrderCommand(text,cart,catalog):{intent:'help'};
 }
-function restartedOrder(cart,command){
+function restartedOrder(cart,command,catalog){
  const reset={...cart,items:[],subtotal:cart.service==='buffet'?null:0,quoted:false,conversation:{retry_order:true}};
  delete reset.reference_price_context;
- return {cart:reset,kind:'reply',reply:command.message};
+ const reason=command.message.replace('\n'+repeatOrderPrompt,'');
+ return {cart:reset,kind:'reply',reply:reason+'\n'+retryOrderHelp(cart,catalog)};
 }
 function fulfillmentPrompt(cart,settings){return deliveryMode(settings,cart.service)==='disabled'?'Este servicio es para retirar en el local. ¿Vas a retirarlo?':'¿Vas a retirar o querés delivery?';}
 function menuReply(cart,list,command={}){
@@ -143,12 +144,12 @@ export function reduceOrder({text,cart:old,catalog=[],menus=[],command={},profil
  if(!cart.service){
   if(command.intent==='clarify')return {cart,kind:'reply',reply:command.message};
   const affirmative=/^si(?: por favor)?$/.test(commercialText(text));
-  return {cart,kind:'reply',reply:affirmative?servicePrompt:greeting};
+  return {cart,kind:'reply',reply:affirmative?servicePrompt:unclearMessageHelp(cart,[])};
  }
  if(command.intent==='retry_order'){
   const found=matchCommercial(text,list,{context:cart.conversation});
-  if(!isPurchaseAttempt(text,{hasProducts:hasProductEvidence(found),catalog:list}))return {cart,kind:'reply',reply:'No entendí bien el mensaje. Tu pedido sigue guardado. ¿Podés explicarme qué necesitás?'};
-  return restartedOrder(cart,command);
+  if(!isPurchaseAttempt(text,{hasProducts:hasProductEvidence(found),catalog:list}))return {cart,kind:'reply',reply:unclearMessageHelp(cart,list)};
+  return restartedOrder(cart,command,list);
  }
  delete cart.reference_price_context;
  const requestedMode=fulfillmentChoice(text)||command.fulfillment;
@@ -166,10 +167,10 @@ export function reduceOrder({text,cart:old,catalog=[],menus=[],command={},profil
  if(command.intent==='cart_edit'){
   if(!edit)return {cart,kind:'reply',reply:'No pude validar ese cambio. Tu pedido sigue guardado.'};
   if(!edit.items.length)return {cart:{...cart,items:[],subtotal:cart.service==='buffet'?null:0,quoted:false,conversation:{}},kind:'reply',reply:edit.message+' El borrador quedó sin artículos. Podés enviarme un pedido nuevo cuando quieras.'};
-  try{cart={...cart,...quote(edit.items,cart.service,list),quoted:true};}catch{return restartedOrder(cart,invalidOrderCommand(text,cart,list,{reason:'Cambió la disponibilidad de los productos del borrador.'}));}
+  try{cart={...cart,...quote(edit.items,cart.service,list),quoted:true};}catch{return restartedOrder(cart,invalidOrderCommand(text,cart,list,{reason:'Cambió la disponibilidad de los productos del borrador.'}),list);}
   return {cart,kind:'reply',reply:edit.message+'\n'+summary(cart)+'\nEl local debe aceptar la solicitud cuando la envíes.'};
  }
- if(command.intent==='update_cart'){try{cart={...cart,...quote(command.items,cart.service,list),quoted:false};}catch{return restartedOrder(cart,retryOrderCommand('Cambió la disponibilidad del catálogo y no pude registrar todos los productos.'));}}
+ if(command.intent==='update_cart'){try{cart={...cart,...quote(command.items,cart.service,list),quoted:false};}catch{return restartedOrder(cart,retryOrderCommand('Cambió la disponibilidad del catálogo y no pude registrar todos los productos.'),list);}}
  const choice=rejectedDelivery?null:requestedMode;
  if(['retiro','delivery'].includes(choice)){cart.fulfillment=choice;if(choice==='retiro')cart.delivery_location_id=null;}
  if(command.address){cart.address=String(command.address).trim().slice(0,500);cart.address_location_id=null;}
@@ -177,8 +178,8 @@ export function reduceOrder({text,cart:old,catalog=[],menus=[],command={},profil
  if(settings.payment_methods.includes(command.payment))cart.payment=command.payment;
  if(rejectedDelivery){if(cart.items.length)cart.quoted=true;return {cart,kind:'reply',reply:(cart.items.length?summary(cart)+'\n':'')+(cart.service==='chiperia'?'La chipería trabaja solo con retiro en el local; el delivery corresponde al buffet.':'Este servicio no tiene delivery disponible.')+' Conservamos tus productos. Escribí RETIRO para elegir esa modalidad.'};}
  if(isConfirmation(text)){
-  if(!cart.items.length)return {cart,kind:'reply',reply:cart.conversation?.retry_order?repeatOrderPrompt:'Elegí productos y cantidades antes de enviar la solicitud.'};
-  let fresh;try{fresh=quote(cart.items,cart.service,list);}catch{return restartedOrder(cart,retryOrderCommand('Cambió la disponibilidad del catálogo y no pude registrar todos los productos.'));}
+  if(!cart.items.length)return {cart,kind:'reply',reply:cart.conversation?.retry_order?retryOrderHelp(cart,list):'Elegí productos y cantidades antes de enviar la solicitud.'};
+  let fresh;try{fresh=quote(cart.items,cart.service,list);}catch{return restartedOrder(cart,retryOrderCommand('Cambió la disponibilidad del catálogo y no pude registrar todos los productos.'),list);}
   if(!cart.quoted||!sameItems(fresh.items,cart.items)){cart={...cart,...fresh,quoted:true};return {cart,kind:'reply',reply:'Revisá el resumen actualizado:\n'+summary(cart)+'\nEscribí CONFIRMAR.'};}
   if(!['retiro','delivery'].includes(cart.fulfillment))return {cart,kind:'reply',reply:fulfillmentPrompt(cart,settings)};
   if(cart.fulfillment==='delivery'&&deliveryMode(settings,cart.service)==='disabled')return {cart,kind:'reply',reply:'El delivery está deshabilitado para este servicio. Elegí retiro o pedí atención del equipo.'};
@@ -195,7 +196,7 @@ export function reduceOrder({text,cart:old,catalog=[],menus=[],command={},profil
   return {cart,kind:'reply',reply:'Atención: '+days+', '+hours.open+'–'+hours.close+'.\n'+delivery+'\nPagos: '+(settings.payment_methods.join(', ')||'a coordinar con el equipo')+'.'};
  }
 
- if(cart.conversation?.retry_order)return {cart,kind:'reply',reply:repeatOrderPrompt};
+ if(cart.conversation?.retry_order)return {cart,kind:'reply',reply:retryOrderHelp(cart,list)};
  if(cart.items.length){cart.quoted=true;return {cart,kind:'reply',reply:(command.intent==='update_cart'?'¡Dale! ':'')+summary(cart)+'\n'+((cart.fulfillment==='a_coordinar'||cart.fulfillment==='delivery'&&deliveryMode(settings,cart.service)==='disabled')?fulfillmentPrompt(cart,settings):cart.fulfillment==='delivery'&&!cart.delivery_location_id?'Enviá tu ubicación puntual de WhatsApp.':'Escribí CONFIRMAR para solicitar revisión del local.')};}
  return {cart,kind:'reply',reply:'Servicio activo: '+cart.service+'. Escribí MENÚ para consultar los productos o el nombre del otro servicio para cambiar.'};
 }

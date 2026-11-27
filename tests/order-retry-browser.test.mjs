@@ -27,6 +27,7 @@ test('Navegador: repetir pedido completo tras plato inexistente, sin acumular, e
   await simulate('buffet');await simulate('Puré de papas 3');await simulate('Milanesa de carne; Pure de papas');
   let data=await state();assert.deepEqual(data.conversations[0].cart.items,[]);assert.equal(data.conversations[0].cart.conversation.retry_order,true);
   assert.match(await page.locator('.message.outbound .bubble').last().innerText(),/pedido completo/);
+  const guidance=await page.locator('.message.outbound .bubble').last().innerText();assert.match(guidance,/cantidad.*nombre completo.*variedad.*uno por línea/);assert.match(guidance,/Ejemplo de cómo escribirlo[\s\S]*2 Milanesa de pollo[\s\S]*1 Sopa paraguaya/);assert.equal(data.orders.length,0);
   await simulate('CONFIRMAR PEDIDO');assert.equal((await state()).orders.length,0);
   await simulate('Milanesa de pollo; Sopa');data=await state();
   assert.deepEqual(data.conversations[0].cart.items.map(item=>[item.variant_id,item.qty]),[['pollo',1],['sopa',1]]);

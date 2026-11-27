@@ -1,6 +1,6 @@
 import {matchCommercial,hasProductEvidence,orderFillers,quantityWords} from './catalog-matching.js';
 import {productName,sellable} from './catalog.js';
-import {retryOrderCommand} from './order-retry.js';
+import {retryOrderCommand,unclearMessageHelp} from './order-retry.js';
 import {isPurchaseAttempt} from './message-intent.js';
 
 export function unavailableReason(product){
@@ -17,7 +17,7 @@ export function quantityProblem(text){
 
 export function invalidOrderCommand(text,cart,catalog,{reason}={}){
  const found=matchCommercial(text,catalog,{context:cart?.conversation});
- if(!isPurchaseAttempt(text,{hasProducts:hasProductEvidence(found),catalog}))return {intent:'clarify',message:'No entendí bien el mensaje. Tu pedido sigue guardado. ¿Podés explicarme qué necesitás o preferís hablar con el equipo?'};
+ if(!isPurchaseAttempt(text,{hasProducts:hasProductEvidence(found),catalog}))return {intent:'clarify',message:unclearMessageHelp(cart,catalog)};
  if(reason||quantityProblem(text))return retryOrderCommand(reason||quantityProblem(text));
  const blocked=found.matches.filter(m=>!(found.unknown.length&&(m.variantOnly||m.prefixOnly))&&(m.product.service==='buffet'?!m.product.available:!sellable(m.product)));
  if(blocked.length)return retryOrderCommand([...new Set(blocked.map(m=>unavailableReason(m.product)))].join(' '));
@@ -30,7 +30,7 @@ export function invalidOrderCommand(text,cart,catalog,{reason}={}){
  const known=[...new Set(found.matches.filter(m=>!m.variantOnly&&!unsafeSegments.some(segment=>m.start>=segment.start&&m.end<=segment.end)).map(m=>productName(m.product)))];
  if(missing.length){
   const label=[...new Set(missing)].join(' ').slice(0,160);
-  return retryOrderCommand((known.length?'Reconocí '+known.join(', ')+', pero ':'')+'no encontré «'+label+'» en '+(cart?.service==='buffet'?'el menú del buffet de hoy.':'el catálogo vigente.'));
+  return retryOrderCommand('No entendí el pedido completo'+(known.length?'. Reconocí '+known.join(', ')+', pero no pude interpretar «'+label+'».':'; no pude interpretar «'+label+'».'));
  }
  return retryOrderCommand('No pude identificar con seguridad todos los productos y cantidades de ese pedido.');
 }

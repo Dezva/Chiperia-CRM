@@ -1,3 +1,4 @@
+import {unclearMessageHelp} from './order-retry.js';
 import {commercialText,categoryKey,productName,sellable} from './catalog.js';
 import {matchCommercial,hasProductEvidence} from './catalog-matching.js';
 import {messageIntent} from './message-intent.js';
@@ -41,7 +42,7 @@ export function readOnlyCommand(text,cart,catalog,settings={}){
  if(['hours','payments','location'].includes(state.topic))return {intent:'info',topic:state.topic};
 
  if(state.topic==='fulfillment')return {intent:'clarify',message:'Podés solicitar retiro o delivery según la disponibilidad del local. ¿Preferís retirar en el local o pedir delivery? Tu pedido sigue igual.'};
- if(state.topic==='general')return /[?¿]/.test(String(text))?null:{intent:'clarify',message:'No entendí bien la consulta. Tu pedido sigue guardado. ¿Podés explicármela de otra manera o preferís hablar con el equipo?'};
+ if(state.topic==='general')return /[?¿]/.test(String(text))?null:{intent:'clarify',message:unclearMessageHelp(cart,catalog)};
  if(!cart?.service)return {intent:'clarify',message:'¿Querés consultar el buffet o la chipería? Elegí un servicio para mostrarte sus opciones.'};
  if(state.topic==='price'&&cart?.service==='buffet')return null;
  if(state.topic==='price'&&/\b(?:delivery|envio|domicilio)\b/.test(language)&&!found.matches.length)return {intent:'clarify',message:'El costo de envío lo confirma el equipo después de revisar la ubicación. Tu pedido sigue igual.'};
