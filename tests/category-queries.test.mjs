@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {emptyCart,reduceOrder,demoCommand,activeCatalog,localDate} from '../shared/viejo-engine.js';
 import {withCategories} from '../shared/catalog.js';
+import {categoryRequest} from '../shared/category-query.js';
 import {databaseV11,mockEnvironment,restBridge} from './v11-helpers.mjs';
 import {runWorker} from '../netlify/lib/worker.mjs';
 const items=[{id:'arroz',name:'Arroz primavera',category_id:'guarniciones',available:true},{id:'sopa',name:'Sopa paraguaya',category_id:'guarniciones',available:true},{id:'agotado',name:'Puré de papas',category_id:'guarniciones',available:false},{id:'carne',name:'Tapa asado al horno',category_id:'carne',available:true},{id:'pollo',name:'Milanesa de pollo',category_id:'pollo_chancho',available:true},{id:'pendiente',name:'Por revisar',category_id:'pending',available:false}];
@@ -36,5 +37,30 @@ test('Worker/PostgreSQL: consulta de guarniciones de la captura mantiene pedido,
  const before=(await c.one('select cart from guarni_conversations where id=$1',[id])).cart;assert.ok(before.delivery_location_id);
  r=await say('Puedes darme las guarniciones que provee el buffet');assert.deepEqual(r.cart,before);assert.equal(r.mode,'bot');
  const messages=(await c.db.query("select body from guarni_messages where conversation_id=$1 and direction='outbound'",[id])).rows;assert.ok(messages.some(m=>m.body.includes('Arroz primavera')&&m.body.includes('Sopa paraguaya')&&!m.body.includes('Tapa asado')));
+ for(const text of ['Y de las carnes?','Cuales son las carnes del menu de hoy?']){
+  const seen=new Set((await c.db.query("select id from guarni_messages where conversation_id=$1 and direction='outbound'",[id])).rows.map(m=>m.id));
+  r=await say(text);assert.deepEqual(r.cart,before,text);assert.equal(r.mode,'bot');
+  const fresh=(await c.db.query("select id,body from guarni_messages where conversation_id=$1 and direction='outbound'",[id])).rows.filter(m=>!seen.has(m.id));assert.equal(fresh.length,1);assert.match(fresh[0].body,/Tapa asado al horno/);assert.doesNotMatch(fresh[0].body,/Arroz|Sopa|Milanesa|No entendí/);
+ }
  assert.equal((await c.one('select count(*)::int n from guarni_orders')).n,0);assert.equal(bridge.calls.some(c=>c.path.includes('responses')),false);
+});
+
+
+test('Regresión de la captura: carnes en plural y continuaciones filtran la categoría sin tocar el borrador',()=>{
+ const before={...say('dos arroz primavera para retirar').cart,reference_price_context:true};
+ const guarniciones=say('Cuales son las guarniciones del menu de hoy',before);
+ assert.match(guarniciones.reply,/Arroz primavera/);assert.deepEqual(guarniciones.cart,before);
+ for(const text of ['Y de las carnes?','¿Y las carnes?','y las carnes','Carnes','Cuáles son las carnes del menú de hoy?','Cuales son las carnes del menu de hoy','¿Cuáles son las carnes?','¿Y de la carne?']){
+  const r=say(text,guarniciones.cart);assert.deepEqual(r.cart,before,text);assert.match(r.reply,/Tapa asado al horno/,text);assert.doesNotMatch(r.reply,/Arroz|Sopa|Milanesa|Puré|Por revisar|No entendí|Reinicié/,text);
+ }
+ const changed=[{...menus[0],items:items.map(p=>({...p,available:p.id==='carne'?false:p.available}))}];const none=say('¿Y de las carnes?',before,[],changed);assert.deepEqual(none.cart,before);assert.match(none.reply,/no hay productos disponibles en Carne/);assert.doesNotMatch(none.reply,/Arroz|Milanesa/);
+});
+
+test('Categorías vigentes: plurales derivados de sus nombres y fragmentos no son equivalencias de productos',()=>{
+ const categories=[{id:'postres',name:'Postre artesanal',active:true},{id:'panes',name:'Pan especial',active:true},{id:'inactive',name:'Bebida fría',active:false}],catalog=withCategories([{id:'postre',category_id:'postres',name:'Flan casero',service:'chiperia',variant:'Base',available:true,active:true,price:7000},{id:'pan',category_id:'panes',name:'Pan de semillas',service:'chiperia',variant:'Base',available:true,active:true,price:4000}],categories),before=emptyCart('Prueba','chiperia');
+ for(const text of ['¿Y los postres artesanales?','Cuáles son los postres artesanales del menú','postres artesanales']){const r=say(text,before,catalog);assert.match(r.reply,/Flan casero/);assert.doesNotMatch(r.reply,/Pan de semillas/);assert.deepEqual(r.cart,before);}
+ assert.deepEqual(categoryRequest('Y los panes especiales',catalog).category_ids,['panes']);
+ assert.equal(categoryRequest('bebidas frías',catalog,categories),null);
+ for(const text of ['y de esas?','no quiero las carnes','agregá dos carnes']){const r=say(text,before,catalog);assert.doesNotMatch(r.reply,/Tapa asado/);assert.notEqual(r.kind,'submit');}
+ const concrete=say('dos arroz primavera');assert.equal(concrete.cart.items[0].qty,2);
 });

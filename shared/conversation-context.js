@@ -71,7 +71,7 @@ export function deterministicConversation(text,cart,catalog,{categories=[]}={}){
  if(/^(horario|horarios|forma pago|forma pago disponible|metodo pago|metodo pago disponible)$/.test(t))return {intent:'info'};
  if(cart?.service==='buffet'&&!catalog.length)return {intent:'menu'};
  const found=matchCommercial(text,catalog,{context:cart?.conversation}),category=categoryRequest(text,catalog,cart?.service==='buffet'?BUFFET_CATEGORIES:categories),isQuery=/\b(?:que|cual|clase|tipo|vendes|vende|venden|tienen|tiene|hay|mostra|mostrame|solo|unicamente|cuanto|menu|catalogo|carta)\b/.test(t)||category?.category_names?.some(name=>commercialText(name)===t);
- if(messageIntent(text,{hasProducts:hasProductEvidence(found),catalog}).topic==='menu'&&!category)return {intent:'menu'};
+ if(messageIntent(text,{hasProducts:hasProductEvidence(found),catalog}).topic==='menu')return {intent:'menu',...(category||{})};
  if(isPurchaseAttempt(text,{hasProducts:hasProductEvidence(found),catalog})&&(quantityProblem(text)||found.matches.some(m=>m.qty<1||m.qty>30)))return invalidOrderCommand(text,cart,catalog);
  if(cart?.service==='buffet'){
   if(/\b(?:menu|carta)\b/.test(t)&&!found.matches.length&&!found.ambiguous.length||/\b(?:que|cual)\b/.test(t)&&/\b(?:plato|hay|tienen|opcion|sirven|venden)\b/.test(t))return {intent:'menu',...(category||{})};

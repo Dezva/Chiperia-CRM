@@ -1,5 +1,5 @@
 import {BUFFET_CATEGORIES} from './buffet-categories.js';
-import {categoryRequest} from './category-query.js';
+import {categoryRequest,isCategoryFragment} from './category-query.js';
 import {commercialText,productTerms} from './catalog.js';
 import {intentText,isCustomerConfirmation as isConfirmation} from './customer-language.js';
 import {fulfillmentIntent} from './fulfillment.js';
@@ -33,10 +33,11 @@ export function messageIntent(text,{hasProducts=false,catalog=[]}={}){
  // Una categoría consultada no es un producto desconocido. Las cantidades y las
  // modificaciones conservan el recorrido de compra; los nombres exactos también.
  const category=categoryRequest(raw,catalog,!catalog.length||/\bbuffet\b/.test(raw)?BUFFET_CATEGORIES:[]);
+ const fragment=isCategoryFragment(raw,category);
  const inquiry=/\b(?:que|cual|cuales|puedes|podes|podrias|podria|quisiera|quiero|necesito|darme|decirme|informacion|lista|opcion|ofrece|ofrecen|provee|tienen|tenes|hay)\b/.test(t);
- if(category&&!quantity&&!change&&!negated&&(!hasProducts||show)&&
+ if(category&&!quantity&&!change&&!negated&&(!hasProducts||show||fragment)&&
     !/\b(?:precio|costo|tarifa|valor|cuanto|kilo)\b/.test(t)&&
-    (show||inquiry||request||category.category_names.some(name=>commercialText(name)===t)))return {kind:'query',topic:'menu'};
+    (show||inquiry||request||fragment))return {kind:'query',topic:'menu'};
  const menu=/\b(?:menu|catalogo|carta)\b/.test(t)&&(!hasProducts&&!quantity||show||/\b(?:menu|catalogo|carta)\b/.test(commercialText(text)));
  if(menu&&!change&&!negated&&(/\b(?:el menu|menu dia|menu hoy)\b/.test(t)||/^(?:menu|catalogo|carta)[.!?]*$/.test(t)))return {kind:'query',topic:'menu'};
  if((!hasProducts||show)&&!change&&!negated){
