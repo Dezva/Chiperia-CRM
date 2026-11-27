@@ -59,7 +59,7 @@ test('Guardas frente a IA adversarial: consultas/sociales no cambian precios, mo
  const reference=say('Referencia: casa de prueba, portón azul',cart);assert.match(reference.cart.address,/casa de prueba/);assert.deepEqual(reference.cart.items,cart.items);
  const namedPlace=say('Referencia: frente al local de empanadas de carne, portón azul',cart);assert.match(namedPlace.cart.address,/local de empanadas de carne/);assert.deepEqual(namedPlace.cart.items,cart.items,'Un lugar que menciona alimentos no es un pedido nuevo');
  const pickup={...cart,fulfillment:'retiro',delivery_location_id:null};assert.deepEqual(say('Dirección: frente al local de empanadas de carne',pickup).cart,pickup);
- const cancelled=say('CANCELAR PEDIDO',{...cart,conversation:{pending:{operation:'remove',candidate_ids:['empanada-carne']}}});assert.deepEqual(cancelled.cart.items,[]);assert.deepEqual(cancelled.cart.saved_carts,cart.saved_carts);assert.equal(cancelled.cart.delivery_location_id,null);assert.match(cancelled.reply,/cancelado/);
+ const cancelled=say('CANCELAR PEDIDO',{...cart,conversation:{pending:{operation:'remove',candidate_ids:['empanada-carne']}}});assert.deepEqual(cancelled.cart.items,[]);assert.deepEqual(cancelled.cart.saved_carts,cart.saved_carts);assert.equal(cancelled.cart.delivery_location_id,null);assert.match(cancelled.reply,/cancelado|cancelé el borrador/i);
 });
 
 test('Cantidades repetidas, incrementos, correcciones y notas de varias líneas conservan independencia',()=>{

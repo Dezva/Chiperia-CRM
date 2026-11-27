@@ -1,3 +1,5 @@
+import {cancellationCommand} from './cancellation.js';
+import {withoutGreeting} from './social-language.js';
 import {referencePriceRequest,referencePriceReply} from './reference-prices.js';
 import {deterministicConversation,fulfillmentCommand,categoryRequest} from './conversation-context.js';
 import {commercialText,sellable,productName} from './catalog.js';
@@ -73,6 +75,7 @@ export function summary(cart){
  return cart.items.map(x=>`${x.qty} × ${x.name}${x.variant==='Base'?'':' · '+x.variant}${cart.service==='chiperia'?': '+money(x.qty*x.unit_price)+' ('+money(x.unit_price)+' c/u)':''}${x.notes?' · Observación: '+x.notes:''}`).join('\n')+'\n'+(cart.service==='buffet'?'Buffet: importe pendiente; el encargado lo acordará con vos.':'Subtotal: '+money(cart.items.reduce((s,x)=>s+x.qty*x.unit_price,0))+'\nLa aceptación final corresponde al local.')+'\nModalidad: '+modality+(cart.fulfillment==='delivery'?'. Envío pendiente de revisión.':'.');
 }
 export function demoCommand(text,cart,catalog,categories=[]){
+ text=withoutGreeting(text,catalog);
  const advisory=readOnlyCommand(text,cart,catalog);if(advisory)return advisory;
  const mode=fulfillmentCommand(text,cart,catalog);if(mode)return mode;
  if(cart?.service==='buffet'){const pricing=referencePriceRequest(text,cart,catalog);if(pricing)return pricing;}
@@ -90,8 +93,18 @@ function menuReply(cart,list,command={}){
  const offered=list.filter(p=>(!command.category_ids?.length||command.category_ids.includes(p.category_id||p.category))&&p.available&&(cart.service==='buffet'||sellable(p)));
  return offered.length?offered.map(p=>p.name+(p.variant&&p.variant!=='Base'?' · '+p.variant:'')+(cart.service==='chiperia'?': '+money(p.price):'')).join('\n')+'\n'+(cart.service==='buffet'?'El encargado acuerda los precios finales.':'Elegí productos y cantidades. El local confirma cada pedido.'):'Por ahora no hay productos disponibles'+(command.category_names?.length?' en '+command.category_names.join(' y '):' en este servicio')+'. El equipo puede ayudarte.';
 }
-export function reduceOrder({text,cart:old,catalog=[],menus=[],command={},profileName='',settings=defaults,now=new Date()}){
+export function reduceOrder({text,cart:old,catalog=[],menus=[],command={},profileName='',settings=defaults,now=new Date(),orders=[]}){
+ text=withoutGreeting(text,[...activeCatalog('chiperia',catalog,menus,now),...activeCatalog('buffet',catalog,menus,now)]);
  let cart=structuredClone({...emptyCart(profileName),...old});
+ const cancellation=cancellationCommand(text,cart,orders);
+ if(cancellation){
+  if(cancellation.intent==='cancel_draft'){
+   const saved={...(cart.saved_carts||{})};delete saved[cart.service];
+   return {cart:{...emptyCart(cart.customer_name||profileName,cancellation.legacy?cart.service:null),saved_carts:saved},kind:'reply',reply:cancellation.message};
+  }
+  return {cart,kind:cancellation.intent==='cancellation_review'?'human':'reply',reply:cancellation.message};
+ }
+
  const intake=initialOrder(text,cart,{chiperia:activeCatalog('chiperia',catalog,menus,now),buffet:activeCatalog('buffet',catalog,menus,now)},serviceChoice(text));
  if(intake?.needsService)return {cart:intake.cart,kind:'reply',reply:'Esos productos pueden corresponder a buffet o chipería. ¿De cuál servicio querés pedir? Conservé tu mensaje para continuar con las mismas cantidades.'};
  if(intake){cart=intake.cart;text=intake.text;command=demoCommand(text,cart,activeCatalog(cart.service,catalog,menus,now));}

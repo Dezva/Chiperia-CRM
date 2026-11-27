@@ -68,7 +68,7 @@ test('Chipería: una variante ausente o desconocida no se sustituye por una del 
 test('WhatsApp pide elegir servicio tras Sí y Sí por favor, incluso al repetirlos', async t => {
   const { say, one } = await conversation(t);
   const welcome = await say('Hola');
-  assert.match(welcome.reply, /Bienvenido.*Buffet o Chipería/);
+  assert.match(welcome.reply, /Bienvenido.*buffet.*chipería/i);
 
   for (const text of ['Sí', 'Sí por favor', 'Sí, por favor', 'Sí']) {
     const { reply, cart, mode } = await say(text);

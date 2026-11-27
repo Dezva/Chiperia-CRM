@@ -22,7 +22,7 @@ export function readOnlyCommand(text,cart,catalog,settings={}){
  if(state.kind==='human')return null;
  if(/^(?:pago|pagare|voy a pagar|quiero pagar|prefiero pagar)\b/.test(language))return {intent:'info',topic:'payments'};
  if(state.kind==='social'){
-  if(!cart?.service&&/^(?:hola|buen)/.test(language))return null;
+  if(state.topic==='greeting')return {intent:'social',message:!cart?.service?'¡Hola! Bienvenido a '+(settings.business_name||'El Viejo')+'. ¿Querés consultar o hacer un pedido del buffet o de la chipería?':cart.items?.length?'¡Hola! Tu pedido sigue guardado. ¿En qué te puedo ayudar para continuar?':'¡Hola! ¿Querés ver el menú de '+(cart.service==='buffet'?'buffet':'chipería')+' o hacer un pedido?'};
   return {intent:'social',message:/gracias/.test(language)?'¡Gracias a vos! Si necesitás algo más, seguimos por acá.':'De acuerdo. Cuando quieras, seguimos con tu pedido.'};
  }
  if(state.kind==='query'&&state.topic==='status')return null;

@@ -1,3 +1,5 @@
+import {cancellationIntent} from './cancellation.js';
+import {greetingParts,withoutGreeting} from './social-language.js';
 import {BUFFET_CATEGORIES} from './buffet-categories.js';
 import {categoryRequest,isCategoryFragment} from './category-query.js';
 import {commercialText,productTerms} from './catalog.js';
@@ -14,9 +16,12 @@ export function humanRequested(text){
 
 // Intenciones lingüísticas generales; no contiene nombres de alimentos ni equivalencias.
 export function messageIntent(text,{hasProducts=false,catalog=[]}={}){
+ if(greetingParts(text,catalog)?.only)return {kind:'social',topic:'greeting'};
+ text=withoutGreeting(text,catalog);
  const protectedWords=new Set(catalog.flatMap(product=>productTerms(product).flatMap(term=>term.split(' '))));
  const raw=intentText(text,{protectedWords}),t=commercialText(raw);
  if(isConfirmation(text))return {kind:'confirmation'};
+ if(cancellationIntent(text))return {kind:'cancellation'};
  if(/^(?:referencia\b|direccion\s*:)/.test(raw))return {kind:'reference'};
  if(/^(?:\/cancelar|\/reiniciar|cancelar (?:el )?pedido|cancela (?:el )?pedido)$/.test(raw))return {kind:'cancellation'};
  if(humanRequested(text))return {kind:'human'};

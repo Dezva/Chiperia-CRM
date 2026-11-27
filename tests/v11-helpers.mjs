@@ -47,7 +47,13 @@ export function restBridge(context,{actor=context.admin,onAI}={}){
    if(table==='viejo_ai_usage'&&options.method==='POST'){await db.query('insert into viejo_ai_usage(id,model,operation,input_tokens,output_tokens,total_tokens,context_chars,created_at) values($1,$2,$3,$4,$5,$6,$7,$8)',[body.id,body.model,body.operation,body.input_tokens??null,body.output_tokens??null,body.total_tokens??null,body.context_chars??null,body.created_at]);return Response.json(null);}
    let select=url.searchParams.get('select')||'*';if(!/^[a-z_,*]+$/.test(select))throw Error('SELECT no soportado en prueba');
    const args=[],where=[];
-   for(const [key,value] of url.searchParams){if(['select','order','limit'].includes(key))continue;if(!/^[a-z_]+$/.test(key)||!value.startsWith('eq.'))throw Error('Filtro no soportado: '+key);args.push(value.slice(3));where.push(key+'=$'+args.length);}
+   for(const [key,value] of url.searchParams){
+    if(['select','order','limit'].includes(key))continue;
+    if(!/^[a-z_]+$/.test(key))throw Error('Filtro no soportado: '+key);
+    if(value.startsWith('eq.')){args.push(value.slice(3));where.push(key+'=$'+args.length);}
+    else if(/^in\.\([a-z_]+(?:,[a-z_]+)*\)$/.test(value)){const markers=value.slice(4,-1).split(',').map(item=>{args.push(item);return '$'+args.length;});where.push(key+' in ('+markers.join(',')+')');}
+    else throw Error('Filtro no soportado: '+key);
+   }
    const sql=`select ${select} from public.${table}`+(where.length?' where '+where.join(' and '):'');
    const rows=(await db.query(sql,args)).rows;
    if(table==='viejo_menus')for(const row of rows)if(row.day)row.day=(row.day instanceof Date?row.day.toISOString():String(row.day)).slice(0,10);

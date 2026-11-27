@@ -1,6 +1,6 @@
 import {fulfillmentChoice,stripFulfillment} from './fulfillment.js';
 import {commercialText,productTerms,productName,sellable} from './catalog.js';
-import {correctOrderTokens,supportsSpellingPhrase} from './order-spelling.js';
+import {correctOrderTokens,supportsSpellingPhrase,oneEdit} from './order-spelling.js';
 import {retryOrderCommand} from './order-retry.js';
 export const quantityWords={un:1,uno:1,una:1,dos:2,tres:3,cuatro:4,cinco:5,seis:6,siete:7,ocho:8,nueve:9,diez:10,once:11,doce:12,otro:1,otra:1};
 export const orderFillers=new Set(commercialText('quiero quisiera querria dame deme llevo llevar necesito pedir pedido agregar agrega agregame por favor y e con para el la lo los las me mi a unidad unidades unidade gracias hola buenas voy querer solo solamente unicamente mas suma sumame sumar anade anadi te dije lee lea mensaje bien entonces das darias podes podrias podria traeme preparame pasame enviame mandame gustaria').split(' '));
@@ -16,9 +16,18 @@ export function inlineFulfillment(text){const natural=fulfillmentChoice(text);if
 function prepared(text){return orderText(stripFulfillment(text)).replace(/\b(?:lee|lea) (?:el )?mensaje(?: bien)?\b/g,' ').replace(/\b(?:deja|deje) repetir(?: el mismo mensaje)?\b/g,' ').replace(/\bpara (?:delivery|retiro|retirar)\b|\ba domicilio\b/g,' ').replace(/\bdelivery\b/g,' ').trim();}
 export function matchCommercial(text,catalog,{context,semantic=false}={}){
  const tokens=[],segments=[],terms=new Map(),shortNames=new Map(),semanticTerms=new Map(),weak=new Set(),supported=new Set();
+ const knownWords=new Set(catalog.flatMap(product=>productTerms(product).flatMap(term=>term.split(' '))));
+ const joined=[...new Set(catalog.flatMap(product=>productTerms(product)).filter(term=>term.includes(' ')&&term.replaceAll(' ','').length>=7))];
+ const expand=token=>{
+  if(knownWords.has(token)||token.length<7)return [token];
+  const exact=joined.filter(term=>term.replaceAll(' ','')===token);
+  const candidates=exact.length?exact:joined.filter(term=>oneEdit(token,term.replaceAll(' ','')));
+  return candidates.length===1?candidates[0].split(' '):[token];
+ };
+
  // La cantidad de una línea nunca pertenece a un producto de otra línea.
  for(const line of String(text).replace(/^\s*no\s*,/i,'').split(/[\r\n;,]+/)){
-  const start=tokens.length;tokens.push(...prepared(line).split(/\s+/).filter(Boolean));
+  const start=tokens.length;tokens.push(...prepared(line).split(/\s+/).filter(Boolean).flatMap(expand));
   const segment={start,end:tokens.length,source:line.trim()};for(let i=start;i<tokens.length;i++)segments[i]=segment;
  }
  const originalTokens=[...tokens];
@@ -55,8 +64,8 @@ export function matchCommercial(text,catalog,{context,semantic=false}={}){
   // Una familia explícita nueva desplaza el foco anterior. «Sándwich de pollo»
   // no debe recuperar la variante Pollo de una empanada del mensaje previo.
   const variants=contextual.filter(p=>!last||p.name===last.product.name);
-  if(last&&tokens.slice(last.end,i).some(t=>['y','e'].includes(t)))variants.push(...catalog.filter(p=>p.name===last.product.name));
-  for(let n=segments[i].end-i;n>=1;n--){const term=tokens.slice(i,i+n).join(' '),exact=terms.get(term),short=exact?null:shortNames.get(term),semanticHit=exact||short?null:semanticTerms.get(term),variant=variants.filter(p=>p.variant&&p.variant!=='Base'&&commercialText(p.variant)===term);const products=[...(exact||short||semanticHit||[]),...variant];
+  if(last&&tokens.slice(last.end,i).some(t=>['y','e'].includes(t)||quantityWords[t]||/^\d+$/.test(t)))variants.push(...catalog.filter(p=>p.name===last.product.name));
+  for(let n=segments[i].end-i;n>=1;n--){const term=tokens.slice(i,i+n).join(' '),exact=terms.get(term),short=exact?null:shortNames.get(term),semanticHit=exact||short?null:semanticTerms.get(term),variant=variants.filter(p=>p.variant&&p.variant!=='Base'&&(commercialText(p.variant)===term||term.length>=4&&!filler.has(term)&&commercialText(p.variant).startsWith(term+' ')));const products=[...(exact||short||semanticHit||[]),...variant];
    if(products.length){hit={n,term,products:[...new Map(products.map(p=>[p.id,p])).values()],variantOnly:!exact&&!short&&!semanticHit,semanticHit:!!semanticHit};break;}}
   if(hit){const m={product:hit.products[0],products:hit.products,term:hit.term,variantOnly:hit.variantOnly,prefixOnly:!!shortNames.get(hit.term)&&!terms.has(hit.term),segmentEnd:segments[i].end,start:i,end:i+hit.n};
    if((semantic&&hit.semanticHit)||Array.from({length:hit.n},(_,j)=>i+j).some(j=>weak.has(j))){

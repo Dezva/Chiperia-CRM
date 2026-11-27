@@ -1,3 +1,5 @@
+import {cancellationIntent} from '../../shared/cancellation.js';
+import {withoutGreeting} from '../../shared/social-language.js';
 import {mediaDisposition} from './whatsapp-media.mjs';
 import {referencePriceRequest} from '../../shared/reference-prices.js';
 import {orderStatusRequested,registeredOrderCommand} from '../../shared/order-status.js';
@@ -63,9 +65,9 @@ export async function runWorker({budgetMs=45000}={}){
    else if(/^\[Contenido (location|live_location) recibido:/.test(job.message.body))result={kind:'reply',cart:c.cart,reply:'Para adjuntar la ubicación a tu pedido, enviame tu ubicación actual puntual desde WhatsApp 📍.'};
    else if(media==='ask_text')result={kind:'reply',cart:c.cart,reply:'Recibí un archivo. Para ayudarte, escribime en texto qué necesitás. Si preferís hablar con una persona, decímelo.'};
    else {
-    const [rawCatalog,client,menus,categories,points,lastOrders]=await Promise.all([db('/rest/v1/guarni_catalog?select=id,name,variant,category,category_id,price,available,active,seasonal,aliases,legacy_generic,service'),db('/rest/v1/crm_clients?id=eq.'+c.client_id+'&select=name'),db('/rest/v1/viejo_menus?status=eq.published&day=eq.'+localDate()+'&select=id,day,status,items'),db('/rest/v1/viejo_catalog_categories?order=position,name'),c.draft_location_id?db('/rest/v1/guarni_locations?id=eq.'+c.draft_location_id+'&conversation_id=eq.'+c.id+'&select=id,address'):Promise.resolve([]),!c.cart?.items?.length&&(orderStatusRequested(job.message.body)||deliveryQueryRequested(job.message.body))?db('/rest/v1/guarni_orders?conversation_id=eq.'+c.id+'&order=created_at.desc&limit=1&select=id,number,status,service,fulfillment,delivery_location_id'):Promise.resolve([])]);
+    const [rawCatalog,client,menus,categories,points,lastOrders,cancellationOrders]=await Promise.all([db('/rest/v1/guarni_catalog?select=id,name,variant,category,category_id,price,available,active,seasonal,aliases,legacy_generic,service'),db('/rest/v1/crm_clients?id=eq.'+c.client_id+'&select=name'),db('/rest/v1/viejo_menus?status=eq.published&day=eq.'+localDate()+'&select=id,day,status,items'),db('/rest/v1/viejo_catalog_categories?order=position,name'),c.draft_location_id?db('/rest/v1/guarni_locations?id=eq.'+c.draft_location_id+'&conversation_id=eq.'+c.id+'&select=id,address'):Promise.resolve([]),!c.cart?.items?.length&&(orderStatusRequested(job.message.body)||deliveryQueryRequested(job.message.body))?db('/rest/v1/guarni_orders?conversation_id=eq.'+c.id+'&order=created_at.desc&limit=1&select=id,number,status,service,fulfillment,delivery_location_id'):Promise.resolve([]),cancellationIntent(job.message.body)?.kind==='cancel'&&!cancellationIntent(job.message.body)?.draftOnly?db('/rest/v1/guarni_orders?conversation_id=eq.'+c.id+'&status=in.(draft,needs_info,pending,accepted,preparing,ready,out_for_delivery)&order=created_at.desc&select=id,number,status,service'):Promise.resolve([])]);
     const catalog=withCategories(rawCatalog,categories);
-    let text=job.message.body,cart=hydrateDeliveryLocation(c.cart?.items?c.cart:emptyCart(client[0]?.name),points[0]);
+    let text=withoutGreeting(job.message.body,[...activeCatalog('chiperia',catalog,menus),...activeCatalog('buffet',catalog,menus)]),cart=hydrateDeliveryLocation(c.cart?.items?c.cart:emptyCart(client[0]?.name),points[0]);
     const intake=initialOrder(text,cart,{chiperia:activeCatalog('chiperia',catalog,menus),buffet:activeCatalog('buffet',catalog,menus)},serviceChoice(text));
     if(intake&&!intake.needsService){text=intake.text;cart=intake.cart;}
     let command;
@@ -73,7 +75,8 @@ export async function runWorker({budgetMs=45000}={}){
     else {
     const mode=fulfillmentCommand(text,cart,activeCatalog(cart.service,catalog,menus));
     const advisory=readOnlyCommand(text,cart,activeCatalog(cart.service,catalog,menus),config);
-    if(intake?.needsService)command={intent:'choose_service'};
+    if(cancellationIntent(text))command={intent:'cancellation'};
+    else if(intake?.needsService)command={intent:'choose_service'};
     else if(paymentChoice(text,config))command={intent:'payment_selection'};
     else if(advisory)command=advisory;
     else if(mode)command=mode;
@@ -86,7 +89,7 @@ export async function runWorker({budgetMs=45000}={}){
     else if(!isConfirmation(text)&&!['/cancelar','/reiniciar','cancelar pedido'].includes(text.toLowerCase())&&!humanRequested(text)){
      try{command=deterministicConversation(text,cart,activeCatalog(cart.service,catalog,menus),{categories:cart.service==='chiperia'?categories:[]})||await interpret(text,cart,activeCatalog(cart.service,catalog,menus),config);}catch{command={intent:'technical_error'};}
     }
-    result=reduceOrder({text,cart,catalog,command,profileName:client[0]?.name,settings:config,menus});
+    result=reduceOrder({text,cart,catalog,command,profileName:client[0]?.name,settings:config,menus,orders:cancellationOrders});
     }
    }
    await rpc('guarni_finish',{p_token:token,p_job:job.job.id,p_revision:c.revision,p_cart:result.cart,p_body:result.reply,p_kind:result.kind});
